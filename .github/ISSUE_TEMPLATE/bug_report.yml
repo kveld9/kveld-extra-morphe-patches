@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a bug or an issue.
+title: "bug: "
+labels: ["Bug report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [existing bug reports](https://github.com/kveld9/kveld-extra-morphe-patches/issues?q=label%3A%22Bug+report%22) before opening a new one.
+  - type: input
+    id: app
+    attributes:
+      label: Target app and version
+      placeholder: "com.example.app 1.2.3"
+    validations:
+      required: true
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug description
+      description: |
+        - Expected vs. actual behavior.
+        - Exact APK filename and architecture.
+        - Steps to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: patcher-log
+    attributes:
+      label: Morphe Manager patching log
+      description: Full log copied from Morphe Manager, including the `[INFO] Build:` header and all `[WARN] [STDIO]: [...]` lines.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: runtime-logcat
+    attributes:
+      label: Runtime crash logcat (optional)
+      description: Crash stack trace filtered to the app (`logcat | grep AndroidRuntime`). Remove personal data before posting.
+      render: shell

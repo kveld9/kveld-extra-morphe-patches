@@ -1,0 +1,800 @@
+package util
+
+import app.morphe.patcher.Patcher
+import app.morphe.patcher.PatcherConfig
+import app.morphe.patcher.dex.BytecodeMode
+import app.morphe.patcher.dex.NoOpDexVerifier
+import app.morphe.patcher.patch.loadPatchesFromJar
+import app.morphe.patcher.resource.CpuArchitecture
+import app.morphe.patches.shared.Constants
+import app.morphe.patcher.apk.ApkUtils
+import app.morphe.patcher.apk.ApkUtils.applyTo
+import kotlinx.coroutines.runBlocking
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.OutputStream
+import java.io.PrintStream
+
+enum class TargetApp(
+    val id: String,
+    val appName: String,
+    val packageName: String,
+    val candidateFilenames: List<String>,
+    val filePattern: Regex,
+    val patchDirectoryPart: String,
+) {
+    // Register one entry per target app, e.g.:
+    // EXAMPLE(
+    //     id = "example",
+    //     appName = "Example",
+    //     packageName = Constants.EXAMPLE_PACKAGE_NAME,
+    //     candidateFilenames = listOf("example_${Constants.EXAMPLE_TARGET_VERSION}.apk"),
+    //     filePattern = Regex("(?i).*example.*\\.(?:apk|apkm|xapk)$"),
+    //     patchDirectoryPart = "example",
+    // ),
+    ;
+
+    companion object {
+        fun fromId(raw: String): TargetApp? {
+            val normalized = raw.trim().lowercase().replace("-", "_")
+            return entries.firstOrNull { it.id == normalized }
+        }
+
+        fun fromFileName(fileName: String): TargetApp? =
+            entries.firstOrNull { it.filePattern.containsMatchIn(fileName) }
+    }
+}
+
+private fun getDownloadDirectory(): File? {
+    return try {
+        val process = ProcessBuilder("xdg-user-dir", "DOWNLOAD").start()
+        val dir = process.inputStream.bufferedReader().readText().trim()
+        if (dir.isNotEmpty() && File(dir).isDirectory) File(dir) else null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun getSearchDirectories(userHome: String): List<File> {
+    val dirs = mutableListOf<File>()
+    dirs.add(File("candidate_apks"))
+    dirs.add(File("../candidate_apks"))
+    dirs.add(File("."))
+    dirs.add(File(".."))
+    getDownloadDirectory()?.let { dirs.add(it) }
+    dirs.add(File(userHome, "Downloads"))
+    dirs.add(File(userHome, "Descargas"))
+    dirs.add(File(userHome, "candidate_apks"))
+    return dirs.distinctBy { it.absolutePath }.filter { it.isDirectory }
+}
+
+private fun findApkForTarget(target: TargetApp, searchDirs: List<File>): File? {
+    for (dir in searchDirs) {
+        for (candidateName in target.candidateFilenames) {
+            val f = File(dir, candidateName)
+            if (f.exists() && f.isFile) return f
+        }
+    }
+    for (dir in searchDirs) {
+        // Never fall back to an output of a previous run: re-patching a patched APK hides fingerprint drift.
+        val matched = dir.listFiles { f ->
+            f.isFile && target.filePattern.containsMatchIn(f.name) && !f.name.contains("patched", ignoreCase = true)
+        }
+            ?.maxByOrNull { it.lastModified() }
+        if (matched != null) return matched
+    }
+    return null
+}
+
+private fun detectTargetFromGit(): TargetApp? {
+    return try {
+        val process = ProcessBuilder("git", "status", "--porcelain").start()
+        val lines = process.inputStream.bufferedReader().readLines()
+        val modifiedPatches = lines.mapNotNull { line ->
+            val path = line.substring(3).trim()
+            if (path.contains("patches/src/main/kotlin/app/morphe/patches/")) path else null
+        }
+        for (target in TargetApp.entries) {
+            if (modifiedPatches.any { it.contains("/${target.patchDirectoryPart}/") }) {
+                return target
+            }
+        }
+        null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun findAndroidBuildTool(toolName: String): File? {
+    System.getenv("PATH")?.split(File.pathSeparator)?.forEach { dir ->
+        val file = File(dir, toolName)
+        if (file.isFile && file.canExecute()) return file
+    }
+    val userHome = System.getProperty("user.home") ?: "."
+    val sdkRoots = listOfNotNull(
+        System.getenv("ANDROID_HOME"),
+        System.getenv("ANDROID_SDK_ROOT"),
+        File(userHome, "Android/Sdk").takeIf { it.exists() }?.absolutePath,
+        File(userHome, "Library/Android/sdk").takeIf { it.exists() }?.absolutePath,
+    )
+    for (sdk in sdkRoots) {
+        val buildToolsDir = File(sdk, "build-tools")
+        if (buildToolsDir.isDirectory) {
+            val latestTools = buildToolsDir.listFiles()?.filter { it.isDirectory }?.maxByOrNull { dir ->
+                val parts = dir.name.split('.').mapNotNull { it.toIntOrNull() }
+                parts.getOrElse(0) { 0 } * 10000 + parts.getOrElse(1) { 0 } * 100 + parts.getOrElse(2) { 0 }
+            }
+            if (latestTools != null) {
+                val tool = File(latestTools, toolName)
+                if (tool.isFile && tool.canExecute()) return tool
+            }
+        }
+    }
+    return null
+}
+
+private fun setBinaryXmlVersionCode(data: ByteArray, newVersionCode: Int): ByteArray {
+    if (data.size < 40) return data
+    val bb = java.nio.ByteBuffer.wrap(data).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+
+    // 1. Parse string pool to find the string pool index of "versionCode"
+    var pos = 8
+    val spType = bb.getInt(pos)
+    val spSize = bb.getInt(pos + 4)
+    if (spType != 0x001c0001 || spSize <= 0 || pos + spSize > data.size) return data
+
+    val stringCount = bb.getInt(pos + 8)
+    val flags = bb.getInt(pos + 16)
+    val stringsStart = pos + bb.getInt(pos + 20)
+    val isUtf8 = (flags and (1 shl 8)) != 0
+
+    var versionCodeStringIdx = -1
+    for (i in 0 until stringCount) {
+        if (pos + 28 + (i + 1) * 4 > data.size) break
+        val strOff = bb.getInt(pos + 28 + i * 4)
+        val sAddr = stringsStart + strOff
+        if (sAddr < 0 || sAddr >= data.size) continue
+
+        val str = if (isUtf8) {
+            var p = sAddr
+            if (p >= data.size) "" else {
+                val len1 = data[p].toInt() and 0xFF
+                p += if (len1 and 0x80 != 0) 2 else 1
+                if (p >= data.size) "" else {
+                    val len2 = data[p].toInt() and 0xFF
+                    p += if (len2 and 0x80 != 0) 2 else 1
+                    var end = p
+                    while (end < data.size && data[end] != 0.toByte()) end++
+                    String(data, p, (end - p).coerceAtLeast(0), Charsets.UTF_8)
+                }
+            }
+        } else {
+            if (sAddr + 2 > data.size) "" else {
+                val u16len = bb.getShort(sAddr).toInt() and 0xFFFF
+                val p = if (u16len and 0x8000 != 0) sAddr + 4 else sAddr + 2
+                val byteLen = (u16len and 0x7FFF) * 2
+                if (p + byteLen <= data.size && byteLen >= 0) {
+                    String(data, p, byteLen, Charsets.UTF_16LE)
+                } else ""
+            }
+        }
+
+        if (str == "versionCode") {
+            versionCodeStringIdx = i
+            break
+        }
+    }
+
+    // Check optional resource map chunk (0x00080180) following string pool
+    pos += spSize
+    var versionCodeResIdx = -1
+    if (pos + 8 <= data.size) {
+        val resMapType = bb.getInt(pos)
+        val resMapSize = bb.getInt(pos + 4)
+        if (resMapType == 0x00080180 && resMapSize > 8) {
+            val resCount = (resMapSize - 8) / 4
+            for (i in 0 until resCount) {
+                if (pos + 8 + i * 4 + 4 > data.size) break
+                if (bb.getInt(pos + 8 + i * 4) == 0x0101021b) { // android.R.attr.versionCode
+                    versionCodeResIdx = i
+                    break
+                }
+            }
+            pos += resMapSize
+        }
+    }
+
+    // 2. Scan START_TAG chunks for <manifest> and update the matching attribute
+    while (pos + 36 <= data.size) {
+        val chunkType = bb.getInt(pos)
+        val chunkSize = bb.getInt(pos + 4)
+        if (chunkType == 0x00100102) { // START_TAG
+            val attrStart = bb.getShort(pos + 24).toInt() and 0xFFFF
+            val attrSize = (bb.getShort(pos + 26).toInt() and 0xFFFF).coerceAtLeast(20)
+            val attrCount = bb.getShort(pos + 28).toInt() and 0xFFFF
+            var attrOffset = pos + 16 + attrStart
+            for (i in 0 until attrCount) {
+                if (attrOffset + 20 > data.size) break
+                val nameIdx = bb.getInt(attrOffset + 4)
+                val matchesName = (versionCodeStringIdx != -1 && nameIdx == versionCodeStringIdx) ||
+                        (versionCodeResIdx != -1 && nameIdx == versionCodeResIdx)
+                val aType = bb.getInt(attrOffset + 12)
+                val isIntType = (aType and 0x10000000) != 0 || aType == 0x10000008
+
+                if (matchesName || (versionCodeStringIdx == -1 && versionCodeResIdx == -1 && isIntType)) {
+                    bb.putInt(attrOffset + 16, newVersionCode)
+                    return data
+                }
+                attrOffset += attrSize
+            }
+            break
+        }
+        if (chunkSize <= 0) break
+        pos += chunkSize
+    }
+    return data
+}
+
+private fun ensurePkcs12KeyStore(keystoreFile: File) {
+    if (keystoreFile.exists() && keystoreFile.length() > 0L) return
+    keystoreFile.parentFile?.mkdirs()
+    val keytoolBin = File(System.getProperty("java.home"), "bin/keytool").takeIf { it.canExecute() }
+        ?: System.getenv("PATH")?.split(File.pathSeparator)?.map { File(it, "keytool") }?.firstOrNull { it.canExecute() }
+        ?: File("/usr/bin/keytool").takeIf { it.canExecute() }
+    if (keytoolBin != null) {
+        val proc = ProcessBuilder(
+            keytoolBin.absolutePath,
+            "-genkeypair",
+            "-keystore", keystoreFile.absolutePath,
+            "-storetype", "PKCS12",
+            "-alias", "morphe",
+            "-keyalg", "RSA",
+            "-keysize", "2048",
+            "-validity", "10000",
+            "-storepass", "morphepassword",
+            "-keypass", "morphepassword",
+            "-dname", "CN=Morphe",
+        ).start()
+        val exit = proc.waitFor()
+        if (exit != 0) {
+            println("[WARN] keytool failed with exit code $exit; keystore may not be valid.")
+        }
+    }
+}
+
+fun main(args: Array<String>) {
+    val userHome = System.getProperty("user.home") ?: "."
+    val searchDirs = getSearchDirectories(userHome)
+
+    val explicitApkArg = args.firstOrNull { it.endsWith(".apk") || it.endsWith(".apkm") || File(it).isFile }
+        ?: System.getenv("TARGET_APK_PATH")
+        ?: System.getProperty("targetApk")
+        ?: System.getProperty("apk")
+
+    val explicitTargetArg = args.firstOrNull { TargetApp.fromId(it) != null }
+        ?: System.getenv("TARGET_APP")
+        ?: System.getProperty("targetApp")
+        ?: System.getProperty("app")
+
+    val explicitApkFile = explicitApkArg?.let { raw ->
+        val direct = File(raw)
+        if (direct.isFile) direct
+        else {
+            val fromParent = File("..", raw)
+            if (fromParent.isFile) fromParent else direct
+        }
+    }
+
+    val apkFile: File
+    val targetApp: TargetApp
+
+    if (explicitApkFile != null && explicitApkFile.isFile) {
+        apkFile = explicitApkFile
+        targetApp = explicitTargetArg?.let { TargetApp.fromId(it) }
+            ?: TargetApp.fromFileName(apkFile.name)
+            ?: error("Could not infer target app for APK: ${apkFile.name}. Specify app via -Papp=<target> or args.")
+    } else {
+        targetApp = explicitTargetArg?.let { TargetApp.fromId(it) }
+            ?: detectTargetFromGit()
+            ?: TargetApp.entries.firstOrNull { findApkForTarget(it, searchDirs) != null }
+            ?: error("No target app resolved. Register it in TargetApp and pass -Papp=<id> or -Papk=<path>.")
+
+        apkFile = findApkForTarget(targetApp, searchDirs)
+            ?: error("Target APK not found for ${targetApp.appName} in search dirs: ${searchDirs.joinToString { it.absolutePath }}. Set TARGET_APK_PATH or -Papk=...")
+    }
+
+    require(apkFile.exists()) { "Target APK not found at: ${apkFile.absolutePath}" }
+
+    val patchFiles = setOf(
+        File("build/libs/").listFiles { file ->
+            val fileName = file.name
+            !fileName.contains("javadoc") &&
+                    !fileName.contains("sources") &&
+                    fileName.endsWith(".mpp")
+        }!!.maxByOrNull { it.lastModified() }!!
+    )
+    val allPatches = loadPatchesFromJar(patchFiles)
+
+    val patchNameFilter = System.getProperty("patchName")?.trim()
+    val targetPatches = allPatches.filter { patch ->
+        val cp = patch.compatibility
+        val matchesApp = if (cp == null) {
+            !patchNameFilter.isNullOrEmpty() && patch.name.equals(patchNameFilter, ignoreCase = true)
+        } else {
+            cp.any { it.packageName == targetApp.packageName }
+        }
+        val matchesName = patchNameFilter.isNullOrEmpty() || patch.name.equals(patchNameFilter, ignoreCase = true)
+        matchesApp && matchesName
+    }.toSet()
+
+    require(targetPatches.isNotEmpty()) {
+        "No patches found in ${patchFiles.first().name} for target ${targetApp.appName} (${targetApp.packageName})" +
+            if (!patchNameFilter.isNullOrEmpty()) " matching '$patchNameFilter'" else ""
+    }
+
+    if (System.getProperty("allOptions").toBoolean()) {
+        var forced = 0
+        targetPatches.forEach { patch ->
+            patch.options.values.filter { it.default is Boolean }.forEach { option ->
+                patch.options[option.key] = true
+                forced++
+            }
+        }
+        println("[INFO] allOptions: forced $forced boolean patch option(s) to true.")
+    }
+
+    println("Loaded ${targetPatches.size} patch(es) for ${targetApp.appName} from ${patchFiles.first().name}:")
+    targetPatches.sortedBy { it.name }.forEach { println("  • ${it.name}") }
+
+    val tempDir = File("build/tmp/patcher-test-workspace").absoluteFile
+    tempDir.deleteRecursively()
+    tempDir.mkdirs()
+
+    val effectiveApkFile = if (apkFile.name.endsWith(".apk", ignoreCase = true)) {
+        val companionApkm = File("${apkFile.absolutePath}m")
+            .takeIf { it.exists() && it.isFile }
+            ?: File(apkFile.parentFile, "${apkFile.nameWithoutExtension}.apkm")
+                .takeIf { it.exists() && it.isFile }
+        if (companionApkm != null) {
+            val isPartialSplit = try {
+                java.util.zip.ZipFile(apkFile).use { zip ->
+                    zip.getEntry("classes2.dex") == null && zip.getEntry("lib/arm64-v8a/libchrome.so") != null
+                }
+            } catch (_: Exception) {
+                false
+            }
+            if (isPartialSplit) {
+                println("[APKM] Detected partial base APK without split DEX. Redirecting to bundle: ${companionApkm.name}")
+                companionApkm
+            } else {
+                apkFile
+            }
+        } else {
+            apkFile
+        }
+    } else {
+        apkFile
+    }
+
+    val actualApkFile = if (effectiveApkFile.name.endsWith(".apkm", ignoreCase = true) || effectiveApkFile.name.endsWith(".xapk", ignoreCase = true)) {
+        val apkmExtractDir = File("build/tmp/patcher-apkm-source").absoluteFile
+        apkmExtractDir.deleteRecursively()
+        apkmExtractDir.mkdirs()
+        val extractedBase = File(apkmExtractDir, "base.apk")
+        java.util.zip.ZipFile(effectiveApkFile).use { apkmZip ->
+            val baseEntry = apkmZip.getEntry("base.apk")
+                ?: apkmZip.entries().asSequence().firstOrNull { it.name.endsWith(".apk") && (it.name.contains("base") || it.name.startsWith(targetApp.packageName)) }
+                ?: apkmZip.entries().asSequence().filter { it.name.endsWith(".apk") }.maxByOrNull { it.size }
+                ?: error("No base APK found in bundle: ${effectiveApkFile.name}")
+            val splitApkEntries = apkmZip.entries().asSequence()
+                .filter { it.name.endsWith(".apk", ignoreCase = true) && it.name != baseEntry.name }
+                .sortedBy { it.name }
+                .toList()
+
+            val splitDexes = mutableListOf<ByteArray>()
+            for (splitEntry in splitApkEntries) {
+                apkmZip.getInputStream(splitEntry).use { splitStream ->
+                    java.util.zip.ZipInputStream(splitStream).use { splitZip ->
+                        val currentSplitDexes = mutableListOf<Pair<String, ByteArray>>()
+                        var entry = splitZip.nextEntry
+                        while (entry != null) {
+                            if (!entry.isDirectory && Regex("^classes\\d*\\.dex$").matches(entry.name)) {
+                                currentSplitDexes.add(entry.name to splitZip.readBytes())
+                            }
+                            entry = splitZip.nextEntry
+                        }
+                        currentSplitDexes.sortBy { it.first }
+                        splitDexes.addAll(currentSplitDexes.map { it.second })
+                    }
+                }
+            }
+
+            apkmZip.getInputStream(baseEntry).use { input ->
+                extractedBase.outputStream().buffered().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            if (splitDexes.isNotEmpty()) {
+                var maxDexIndex = 1
+                java.util.zip.ZipFile(extractedBase).use { baseZip ->
+                    baseZip.entries().asSequence().forEach { entry ->
+                        val m = Regex("^classes(\\d*)\\.dex$").matchEntire(entry.name)
+                        if (m != null) {
+                            val num = m.groupValues[1]
+                            val idx = if (num.isEmpty()) 1 else num.toInt()
+                            if (idx > maxDexIndex) maxDexIndex = idx
+                        }
+                    }
+                }
+
+                val uri = java.net.URI.create("jar:" + extractedBase.toURI())
+                val env = mapOf("create" to "false")
+                java.nio.file.FileSystems.newFileSystem(uri, env).use { fs ->
+                    for (dexBytes in splitDexes) {
+                        maxDexIndex++
+                        val entryPath = fs.getPath("classes$maxDexIndex.dex")
+                        java.nio.file.Files.write(entryPath, dexBytes)
+                    }
+                }
+                println("[APKM] Merged ${splitDexes.size} DEX file(s) from split APK(s) into base.apk (total DEX files: $maxDexIndex)")
+            }
+        }
+        extractedBase
+    } else {
+        effectiveApkFile
+    }
+
+    val config = PatcherConfig(
+        apkFile = actualApkFile,
+        temporaryFilesPath = tempDir,
+        aaptBinaryPath = null,
+        frameworkFileDirectory = null,
+        useArsclib = false,
+        keepArchitectures = setOf(CpuArchitecture.ARM64_V8A, CpuArchitecture.ARMEABI_V7A),
+        useBytecodeMode = BytecodeMode.STRIP_FAST,
+        verifier = NoOpDexVerifier
+    )
+
+    println("\n[INIT] Initializing Morphe Patcher engine...")
+    val patcher = Patcher(config)
+    patcher += targetPatches
+
+    println("[EXEC] Executing patch pipeline on ${effectiveApkFile.name} (target: ${targetApp.appName})...")
+    var totalPatches = 0
+    var successfulPatches = 0
+    var failedPatches = 0
+    val failures = mutableListOf<String>()
+
+    val originalOut = System.out
+    val originalErr = System.err
+    val fingerprintErrors = java.util.concurrent.CopyOnWriteArrayList<String>()
+    // The inline smali tree walker only reports semantic errors (e.g. "[6,8] Invalid register: v22")
+    // to stderr and silently drops the offending instruction, so they must be caught here.
+    val smaliErrorPattern = Regex("""^\[\d+,\d+] .+""")
+    val pendingSmaliErrors = java.util.concurrent.CopyOnWriteArrayList<String>()
+    val smaliCompileErrors = mutableListOf<String>()
+
+    class InterceptingOutputStream(val delegate: OutputStream) : OutputStream() {
+        private val buffer = ByteArrayOutputStream()
+
+        override fun write(b: Int) {
+            delegate.write(b)
+            if (b == '\n'.code) {
+                checkLine(buffer.toString("UTF-8"))
+                buffer.reset()
+            } else if (b != '\r'.code) {
+                buffer.write(b)
+            }
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            delegate.write(b, off, len)
+            for (i in off until off + len) {
+                val byte = b[i]
+                if (byte == '\n'.code.toByte()) {
+                    checkLine(buffer.toString("UTF-8"))
+                    buffer.reset()
+                } else if (byte != '\r'.code.toByte()) {
+                    buffer.write(byte.toInt())
+                }
+            }
+        }
+
+        private fun checkLine(line: String) {
+            if (smaliErrorPattern.matches(line.trim())) {
+                pendingSmaliErrors.add(line.trim())
+                return
+            }
+            val lower = line.lowercase()
+            if (line.startsWith("Detected Fingerprint Failures:") || line.startsWith("[ERROR]") || line.startsWith("FINAL PATCHING RESULT")) return
+            if (lower.contains("failed to match the fingerprint") || (lower.contains("fingerprint mismatch") && !line.startsWith("Detected Fingerprint Failures:"))) {
+                fingerprintErrors.add(line.trim())
+            }
+        }
+
+        override fun flush() {
+            delegate.flush()
+        }
+
+        override fun close() {
+            if (buffer.size() > 0) {
+                checkLine(buffer.toString("UTF-8"))
+                buffer.reset()
+            }
+            delegate.close()
+        }
+    }
+
+    val interceptingOut = PrintStream(InterceptingOutputStream(originalOut), true, "UTF-8")
+    val interceptingErr = PrintStream(InterceptingOutputStream(originalErr), true, "UTF-8")
+    System.setOut(interceptingOut)
+    System.setErr(interceptingErr)
+
+    try {
+        runBlocking {
+            patcher().collect { result ->
+                totalPatches++
+                val patchName = result.patch.name ?: "Unknown"
+                if (pendingSmaliErrors.isNotEmpty()) {
+                    pendingSmaliErrors.forEach { smaliCompileErrors.add("$patchName: $it") }
+                    pendingSmaliErrors.clear()
+                }
+                if (result.exception == null) {
+                    successfulPatches++
+                    println("[PASS] $patchName")
+                } else {
+                    failedPatches++
+                    val err = result.exception?.message ?: "Unknown error"
+                    println("[FAIL] $patchName -> $err")
+                    result.exception?.printStackTrace()
+                    failures.add("$patchName: $err")
+                }
+            }
+        }
+
+        println("\n========================================")
+        println("FINAL PATCHING RESULT")
+        println("========================================")
+        println("Target App:    ${targetApp.appName} (${targetApp.packageName})")
+        println("APK File:      ${effectiveApkFile.name}")
+        println("Total patches: $totalPatches")
+        println("Successful:    $successfulPatches")
+        println("Failed:        $failedPatches")
+        println("Detected Fingerprint Failures: ${fingerprintErrors.size}")
+        println("Detected Smali Compile Errors: ${smaliCompileErrors.size}")
+
+        if (failedPatches == 0 && fingerprintErrors.isEmpty() && smaliCompileErrors.isEmpty()) {
+            println("\n[BUILD] Compiling modified bytecode & assets via patcher.get()...")
+            File(tempDir, "patched/dex").mkdirs()
+            File(tempDir, "patched/originalDex").mkdirs()
+            val patcherResult = patcher.get()
+            println("[BUILD] Compiled ${patcherResult.dexFiles.size} DEX files successfully.")
+
+            val outPath = System.getProperty("outputApk")
+            if (outPath != null) {
+                val directFile = File(outPath)
+                val outFile = if (directFile.isAbsolute) {
+                    directFile
+                } else {
+                    val fromParent = File("..", outPath)
+                    if (fromParent.parentFile?.isDirectory == true) fromParent.canonicalFile
+                    else directFile.absoluteFile
+                }
+                outFile.parentFile?.mkdirs()
+                val unsignedApk = File(tempDir, "unsigned-work.apk")
+                actualApkFile.copyTo(unsignedApk, overwrite = true)
+                println("\n[PACK] Applying patcher result to APK (source: ${unsignedApk.length()} bytes)...")
+                val maxVersionCode = System.getProperty("maxVersionCode") == "true" || System.getenv("MAX_VERSION_CODE") == "true"
+                var manifestSynced = false
+                patcherResult.applyTo(unsignedApk)
+                patcherResult.resources.resourcesApk?.let { resApk ->
+                    java.util.zip.ZipFile(resApk).use { resZip ->
+                        val manifestEntry = resZip.getEntry("AndroidManifest.xml")
+                        if (manifestEntry != null) {
+                            val rawManifestBytes = resZip.getInputStream(manifestEntry).readBytes()
+                            // Apply the versionCode override in the same pass so the APK zip is rewritten only once.
+                            val manifestBytes = if (maxVersionCode) setBinaryXmlVersionCode(rawManifestBytes, Int.MAX_VALUE) else rawManifestBytes
+                            val uri = java.net.URI.create("jar:" + unsignedApk.toURI())
+                            val env = mapOf("create" to "false")
+                            java.nio.file.FileSystems.newFileSystem(uri, env).use { fs ->
+                                val targetManifest = fs.getPath("AndroidManifest.xml")
+                                java.nio.file.Files.write(targetManifest, manifestBytes)
+                            }
+                            manifestSynced = true
+                            println("[PACK] Synchronized patched AndroidManifest.xml from resources.apk (${manifestBytes.size} bytes)")
+                            if (maxVersionCode) println("[PACK] Overrode AndroidManifest.xml versionCode -> 2147483647 (Int.MAX_VALUE)")
+                        }
+                    }
+                }
+                if (maxVersionCode && !manifestSynced) {
+                    val uri = java.net.URI.create("jar:" + unsignedApk.toURI())
+                    val env = mapOf("create" to "false")
+                    java.nio.file.FileSystems.newFileSystem(uri, env).use { fs ->
+                        val targetManifest = fs.getPath("AndroidManifest.xml")
+                        if (java.nio.file.Files.exists(targetManifest)) {
+                            val rawBytes = java.nio.file.Files.readAllBytes(targetManifest)
+                            val patchedBytes = setBinaryXmlVersionCode(rawBytes, Int.MAX_VALUE)
+                            java.nio.file.Files.write(targetManifest, patchedBytes)
+                            println("[PACK] Overrode AndroidManifest.xml versionCode -> 2147483647 (Int.MAX_VALUE)")
+                        }
+                    }
+                }
+                println("[PACK] After applyTo: unsignedApk exists=${unsignedApk.exists()}, size=${unsignedApk.length()} bytes")
+                val zipalignBin = findAndroidBuildTool("zipalign")
+                val apksignerBin = findAndroidBuildTool("apksigner")
+                val buildToolsMajor = zipalignBin?.parentFile?.name?.split('.')?.firstOrNull()?.toIntOrNull() ?: 0
+                val supports16k = buildToolsMajor >= 35
+
+                val keystoreFile = File("build/morphe-device.p12").takeIf { it.exists() && it.length() > 0L }
+                    ?: File("build/morphe-debug.p12").absoluteFile
+                ensurePkcs12KeyStore(keystoreFile)
+
+                if (zipalignBin != null && apksignerBin != null && keystoreFile.exists() && keystoreFile.length() > 0L) {
+                    try {
+                        val alignMode = if (supports16k) "16 KB page alignment (-P 16 4)" else "4-byte alignment"
+                        println("\n[ALIGN] Running $alignMode via zipalign...")
+                        val alignArgs = if (supports16k) {
+                            listOf(zipalignBin.absolutePath, "-f", "-P", "16", "4", unsignedApk.absolutePath, outFile.absolutePath)
+                        } else {
+                            listOf(zipalignBin.absolutePath, "-f", "4", unsignedApk.absolutePath, outFile.absolutePath)
+                        }
+                        val alignProc = ProcessBuilder(alignArgs).inheritIO().start()
+                        val alignExit = alignProc.waitFor()
+                        if (alignExit != 0) {
+                            error("zipalign failed with exit code $alignExit")
+                        }
+
+                        println("[SIGN] Signing APK via apksigner...")
+                        val signArgs = mutableListOf(
+                            apksignerBin.absolutePath,
+                            "sign",
+                            "--ks", keystoreFile.absolutePath,
+                            "--ks-type", "PKCS12",
+                            "--ks-pass", "pass:morphepassword",
+                        )
+                        if (supports16k) {
+                            signArgs.add("--alignment-preserved")
+                        }
+                        signArgs.add(outFile.absolutePath)
+
+                        val signProc = ProcessBuilder(signArgs).inheritIO().start()
+                        val signExit = signProc.waitFor()
+                        if (signExit != 0) {
+                            error("apksigner failed with exit code $signExit")
+                        }
+                        println("[DONE] Patched, aligned & signed APK saved at: ${outFile.absolutePath}")
+                    } finally {
+                        unsignedApk.delete()
+                    }
+                } else {
+                    println("\n[WARN] Android SDK zipalign/apksigner not found; falling back to ApkUtils.signApk...")
+                    val ksDetails = ApkUtils.KeyStoreDetails(
+                        keyStore = keystoreFile,
+                        alias = "morphe",
+                        password = "morphepassword",
+                    )
+                    try {
+                        ApkUtils.signApk(
+                            inputApkFile = unsignedApk,
+                            outputApkFile = outFile,
+                            signer = "Morphe",
+                            keyStoreDetails = ksDetails,
+                        )
+                        println("[DONE] Patched & signed APK saved at: ${outFile.absolutePath}")
+                    } finally {
+                        unsignedApk.delete()
+                    }
+                }
+
+                if (effectiveApkFile.name.endsWith(".apkm", ignoreCase = true) || effectiveApkFile.name.endsWith(".xapk", ignoreCase = true)) {
+                    java.util.zip.ZipFile(effectiveApkFile).use { apkmZip ->
+                        val baseEntry = apkmZip.getEntry("base.apk")
+                            ?: apkmZip.entries().asSequence().firstOrNull { it.name.endsWith(".apk") && (it.name.contains("base") || it.name.startsWith(targetApp.packageName)) }
+                            ?: apkmZip.entries().asSequence().filter { it.name.endsWith(".apk") }.maxByOrNull { it.size }
+                        val splitApkEntries = apkmZip.entries().asSequence()
+                            .filter { it.name.endsWith(".apk", ignoreCase = true) && it.name != baseEntry?.name }
+                            .toList()
+                        splitApkEntries.parallelStream().forEach { splitEntry ->
+                            val rawSplitFile = File(tempDir, splitEntry.name)
+                            apkmZip.getInputStream(splitEntry).use { input ->
+                                rawSplitFile.outputStream().buffered().use { output -> input.copyTo(output) }
+                            }
+
+                            if (maxVersionCode) {
+                                try {
+                                    val uri = java.net.URI.create("jar:" + rawSplitFile.toURI())
+                                    java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>()).use { fs ->
+                                        val splitManifest = fs.getPath("AndroidManifest.xml")
+                                        if (java.nio.file.Files.exists(splitManifest)) {
+                                            val rawBytes = java.nio.file.Files.readAllBytes(splitManifest)
+                                            val patchedBytes = setBinaryXmlVersionCode(rawBytes, Int.MAX_VALUE)
+                                            java.nio.file.Files.write(splitManifest, patchedBytes)
+                                            println("[PACK] Overrode companion split ${splitEntry.name} versionCode -> 2147483647 (Int.MAX_VALUE)")
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    println("[WARN] Could not override split ${splitEntry.name} versionCode: ${e.message}")
+                                }
+                            }
+
+                            // Prefix splits with the output name so bundles of different apps never overwrite
+                            // each other and `adb install-multiple -r <out-stem>*.apk` installs the whole set.
+                            val signedSplitFile = File(outFile.parentFile, "${outFile.nameWithoutExtension}.${File(splitEntry.name).name}")
+                            println("[SIGN] Signing companion split -> ${signedSplitFile.name}...")
+                            if (zipalignBin != null && apksignerBin != null && keystoreFile.exists() && keystoreFile.length() > 0L) {
+                                val splitAlignArgs = if (supports16k) {
+                                    listOf(zipalignBin.absolutePath, "-f", "-P", "16", "4", rawSplitFile.absolutePath, signedSplitFile.absolutePath)
+                                } else {
+                                    listOf(zipalignBin.absolutePath, "-f", "4", rawSplitFile.absolutePath, signedSplitFile.absolutePath)
+                                }
+                                val splitAlignProc = ProcessBuilder(splitAlignArgs).inheritIO().start()
+                                val splitAlignExit = splitAlignProc.waitFor()
+                                if (splitAlignExit != 0) {
+                                    error("zipalign failed for split ${splitEntry.name} with exit code $splitAlignExit")
+                                }
+
+                                val splitSignArgs = mutableListOf(
+                                    apksignerBin.absolutePath,
+                                    "sign",
+                                    "--ks", keystoreFile.absolutePath,
+                                    "--ks-type", "PKCS12",
+                                    "--ks-pass", "pass:morphepassword",
+                                )
+                                if (supports16k) {
+                                    splitSignArgs.add("--alignment-preserved")
+                                }
+                                splitSignArgs.add(signedSplitFile.absolutePath)
+
+                                val splitSignProc = ProcessBuilder(splitSignArgs).inheritIO().start()
+                                val splitSignExit = splitSignProc.waitFor()
+                                if (splitSignExit != 0) {
+                                    error("apksigner failed for split ${splitEntry.name} with exit code $splitSignExit")
+                                }
+                            } else {
+                                val ksDetails = ApkUtils.KeyStoreDetails(
+                                    keyStore = keystoreFile,
+                                    alias = "morphe",
+                                    password = "morphepassword",
+                                )
+                                ApkUtils.signApk(
+                                    inputApkFile = rawSplitFile,
+                                    outputApkFile = signedSplitFile,
+                                    signer = "Morphe",
+                                    keyStoreDetails = ksDetails,
+                                )
+                            }
+                            println("[DONE] Signed companion split saved at: ${signedSplitFile.absolutePath}")
+                        }
+                    }
+                }
+            }
+        }
+    } finally {
+        System.setOut(originalOut)
+        System.setErr(originalErr)
+        patcher.close()
+        tempDir.deleteRecursively()
+        File("build/tmp/patcher-apkm-source").deleteRecursively()
+    }
+
+    if (fingerprintErrors.isNotEmpty()) {
+        println("\n[ERROR] Unresolved fingerprint mismatches detected during patch execution (${fingerprintErrors.size}):")
+        fingerprintErrors.forEach { println("  • $it") }
+        error("Patcher execution failed: ${fingerprintErrors.size} fingerprint mismatch(es) detected! A patch update or creation is NEVER complete until 100% of fingerprints resolve cleanly.")
+    }
+
+    if (smaliCompileErrors.isNotEmpty()) {
+        println("\n[ERROR] Inline smali compile errors detected; the offending instructions were dropped (${smaliCompileErrors.size}):")
+        smaliCompileErrors.forEach { println("  • $it") }
+        error("Patcher execution failed: ${smaliCompileErrors.size} inline smali compile error(s) detected! Non-range invokes cannot address registers above v15; use the /range form or move values into low registers.")
+    }
+
+    if (failedPatches > 0) {
+        println("\nFailure details:")
+        failures.forEach { println("  - $it") }
+        error("Patcher finished with $failedPatches failure(s)")
+    } else {
+        println("\n100% OF ${targetApp.appName.uppercase()} PATCHES APPLIED WITH ZERO ERRORS AND ZERO FINGERPRINT MISMATCHES!")
+    }
+}

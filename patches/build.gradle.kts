@@ -1,0 +1,89 @@
+group = "com.kveld9.morphe.extra"
+
+patches {
+    about {
+        name = "kveld9 Extra Patches"
+        description = "Standalone, app-specific patches for use with Morphe."
+        source = "https://github.com/kveld9/kveld-extra-morphe-patches"
+        author = "kveld9"
+        contact = "https://github.com/kveld9/kveld-extra-morphe-patches/issues"
+        website = "https://github.com/kveld9/kveld-extra-morphe-patches"
+        license = "GPLv3"
+    }
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+    }
+}
+
+// Separate configuration so gson is available at runtime for the
+// generatePatchesList task but never bundled into the APK.
+val patchListGeneratorClasspath = configurations.create("patchListGeneratorClasspath")
+
+dependencies {
+    compileOnly(libs.gson)
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+    patchListGeneratorClasspath(libs.gson)
+    patchListGeneratorClasspath("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+}
+
+tasks {
+    register<JavaExec>("generatePatchesList") {
+        description = "Build patch with patch list"
+
+        dependsOn("buildAndroid")
+
+        classpath = sourceSets["main"].runtimeClasspath + patchListGeneratorClasspath
+        mainClass.set("util.PatchListGeneratorKt")
+    }
+
+    register<JavaExec>("runPatchTest") {
+        description = "Execute Morphe Patcher against target APK"
+
+        dependsOn("buildAndroid")
+
+        maxHeapSize = "8g"
+        classpath = sourceSets["main"].runtimeClasspath + patchListGeneratorClasspath
+        mainClass.set("util.PatchExecutionTestKt")
+
+        if (project.hasProperty("app")) {
+            systemProperty("targetApp", project.property("app").toString())
+        }
+        if (project.hasProperty("apk")) {
+            systemProperty("targetApk", project.property("apk").toString())
+        }
+        if (project.hasProperty("out")) {
+            systemProperty("outputApk", project.property("out").toString())
+        }
+        if (project.hasProperty("outputApk")) {
+            systemProperty("outputApk", project.property("outputApk").toString())
+        }
+        if (project.hasProperty("patch")) {
+            systemProperty("patchName", project.property("patch").toString())
+        }
+        if (project.hasProperty("maxVersionCode")) {
+            systemProperty("maxVersionCode", project.property("maxVersionCode").toString())
+        }
+        if (project.hasProperty("allOptions")) {
+            systemProperty("allOptions", project.property("allOptions").toString())
+        }
+        System.getProperty("targetApp")?.let { systemProperty("targetApp", it) }
+        System.getProperty("targetApk")?.let { systemProperty("targetApk", it) }
+        System.getProperty("outputApk")?.let { systemProperty("outputApk", it) }
+        System.getProperty("patchName")?.let { systemProperty("patchName", it) }
+        System.getProperty("maxVersionCode")?.let { systemProperty("maxVersionCode", it) }
+        System.getProperty("allOptions")?.let { systemProperty("allOptions", it) }
+    }
+
+    jar {
+        exclude("util/**")
+        finalizedBy("buildAndroid")
+    }
+
+    // Used by gradle-semantic-release-plugin.
+    publish {
+        dependsOn("generatePatchesList")
+    }
+}
