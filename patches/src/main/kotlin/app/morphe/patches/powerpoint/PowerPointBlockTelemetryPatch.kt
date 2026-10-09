@@ -60,7 +60,7 @@ private val optOutMetadata = listOf(
 
 private val powerPointTelemetryResourcePatch = resourcePatch(
     name = "PowerPoint Telemetry Manifest Purge",
-    description = "Strips tracking/advertising permissions, disables telemetry and HockeyApp components, and injects opt-out metadata in AndroidManifest.xml.",
+    description = "Strips tracking/advertising permissions, disables telemetry, HockeyApp activity and DataTransport components, and injects opt-out metadata in AndroidManifest.xml.",
     default = false,
 ) {
     compatibleWith(Constants.COMPATIBILITY_POWERPOINT)
@@ -192,7 +192,7 @@ private fun hookTelemetryDispatchers(hookedMethods: MutableList<String>) {
 @Suppress("unused")
 val powerPointBlockTelemetryPatch = bytecodePatch(
     name = "Block Telemetry & Trackers",
-    description = "Neutralizes Microsoft OneDS/Aria, MUTSDK, HockeyApp, and DataTransport telemetry pipelines, and strips advertising permissions.",
+    description = "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods plus MUTSDK receivers, disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_POWERPOINT)
