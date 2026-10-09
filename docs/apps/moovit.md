@@ -23,6 +23,7 @@ Technical documentation and patch catalog for Moovit on Android.
 | :--- | :--- | :--- | :--- | :--- |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Moovit Telemetry Manifest Purge` | Disables analytics and tracking services, providers, and receivers, and strips advertising permissions. |
 | **Fix Google Maps** | `bytecodePatch` | `true` (Enabled) | None | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |
+| **Unlock Moovit+** | `bytecodePatch` | `true` (Enabled) | None | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |
 | **Moovit Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips advertising and tracking permissions, disables analytics services, providers, and receivers, and injects opt-out metadata in AndroidManifest.xml. |
 | **Locale Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. |
 | **Screen Density Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. |
@@ -101,6 +102,14 @@ When Moovit is re-packaged or signed with custom keys, Google Play Services reje
   - Dynamically proxies `ActivityThread.sPackageManager` and `ServiceManager.sCache["package"]`.
   - Intercepts `getPackageInfo` and `getPackageInfoAsUser` calls for `com.tranzmate` to return the official Tranzmate signing certificate to Google Play Services.
   - Guarantees full map tile loading, geocoding, and routing overlays without modifying host API keys.
+
+### D. Moovit+ Premium Unlocking (`bytecodePatch`)
+
+Unlocks subscription entitlement gates and premium features locally:
+- **Subscription State Gate**: Rewrites `b()Z` in the `subscribed_skus` wrapper (`Ll1g;`) to return `true` unconditionally.
+- **Subscription Package State**: Forces `com.moovit.app.subscription.premium.packages.a.b()` to return `SubscriptionPackageState.ACTIVE`.
+- **Safe Ride Feature Gate**: Forces `com.moovit.app.subscription.premium.packages.safety.b.a()` to return `SubscriptionPackageState.ACTIVE`.
+- **Favorite Location Address Search**: Flips constructor parameter `c` (`addAddressProvider`) from `false` to `true` in `FavoriteLocationEditorActivity.h1()`, enabling geocoded exact address searches rather than restricting favorite searches solely to transit stop identifiers.
 
 ---
 
