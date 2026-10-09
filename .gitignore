@@ -190,3 +190,7 @@ Thumbs.db
 
 # Local agent instructions
 CLAUDE.local.md
+
+# Physical & Runtime ADB Test Harness
+validation/physical_harness/results/
+validation/runtime/
