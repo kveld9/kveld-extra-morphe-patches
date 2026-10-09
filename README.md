@@ -140,6 +140,12 @@ Before proposing new features, review the [Project Scope](docs/out-of-scope.md).
 
 - Telegram Support Group: [t.me/kveldmorphe](https://t.me/kveldmorphe)
 
+## Legal Disclaimer
+
+**kveld9 Extra Patches** is an independent, community-driven open-source project and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Meta Platforms, Inc., X Corp., Tranzit (Moovit), Microsoft Corporation, or any of their subsidiaries or affiliates.
+
+All product names, logos, brands, and registered trademarks mentioned in this repository are the property of their respective holders. Their inclusion does not imply affiliation with or endorsement by them.
+
 ## License
 
 GPLv3. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
