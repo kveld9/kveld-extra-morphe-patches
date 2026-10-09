@@ -41,7 +41,7 @@
 ## Patches
 
 <!-- PATCHES_START -->
-<details open>
+<details>
 <summary>Instagram&nbsp;&nbsp;•&nbsp;&nbsp;<b>2 patches</b></summary>
 <br>
 
@@ -57,7 +57,7 @@
 
 </details>
 
-<details open>
+<details>
 <summary>Moovit&nbsp;&nbsp;•&nbsp;&nbsp;<b>7 patches</b></summary>
 <br>
 
@@ -78,7 +78,7 @@
 
 </details>
 
-<details open>
+<details>
 <summary>PowerPoint&nbsp;&nbsp;•&nbsp;&nbsp;<b>8 patches</b></summary>
 <br>
 
@@ -100,7 +100,7 @@
 
 </details>
 
-<details open>
+<details>
 <summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>2 patches</b></summary>
 <br>
 
