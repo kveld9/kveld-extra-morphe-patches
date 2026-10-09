@@ -22,6 +22,13 @@
 
 ---
 
+## Key Advantages
+
+- **Zero Runtime Overhead**: compile-time Dalvik bytecode manipulation and XML transformation without background daemons, proxy servers, or Xposed frameworks.
+- **Client-Side Telemetry Neutralization**: disables tracking, analytics, and crash reporting at method call sites and manifest components instead of fragile network-level blackholing.
+- **Rootless & Standalone**: operates directly on userland APKs and APKM split bundles; no Magisk, KernelSU, or root privileges required.
+- **Strict Upstream Parity**: each app targets exactly one version, the latest supported release, with exact fingerprint assertions.
+
 ## Supported Apps
 
 | App | Package | Target Version | Variant | Download Source | Guide |
@@ -113,8 +120,25 @@
 
 ## Documentation
 
-- [Building & Development](docs/building.md)
-- [Project Scope](docs/out-of-scope.md)
+| Guide | Description |
+| :--- | :--- |
+| [X Guide](docs/apps/twitter.md) | Target compatibility, patch catalog, and telemetry/manifest breakdown for X. |
+| [Moovit Guide](docs/apps/moovit.md) | Target compatibility, patch catalog, Maps signature spoofing, Moovit+ unlock, and ads/paywall suppression. |
+| [Building & Development](docs/building.md) | Toolchain prerequisites, Gradle build tasks, in-situ patching gate, and catalog synchronization. |
+| [Project Scope](docs/out-of-scope.md) | Compile-time invariants, single-version policy, and rejected feature categories. |
+
+## Contributing
+
+Before proposing new features, review the [Project Scope](docs/out-of-scope.md). Every patch change must pass the in-situ verification gate with 0 failed patches, 0 fingerprint mismatches, and 0 smali compile errors:
+
+```bash
+./gradlew runPatchTest -Papp=<targetApp>   # e.g. instagram, twitter, moovit, powerpoint
+./gradlew check
+```
+
+## Community & Support
+
+- Telegram Support Group: [t.me/kveldmorphe](https://t.me/kveldmorphe)
 
 ## License
 
