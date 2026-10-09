@@ -14,7 +14,7 @@ The repository uses declarative configurations. Never assume or hardcode version
 | **Patcher Runtime** | Morphe Patcher Engine | `gradle/libs.versions.toml` (`versions.morphe-patcher`, `versions.smali`) |
 | **Gradle Plugin** | `app.morphe.patches` | `settings.gradle.kts` (`plugins { id(...) }`) |
 | **Build Tool** | Gradle Wrapper | `gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) |
-| **Languages & Tooling** | Kotlin (`-Xcontext-parameters`), Java, Smali | JVM 17+ (CI: Temurin JDK 21 in `release.yml`) |
+| **Languages & Tooling** | Kotlin (`-Xcontext-parameters`), Java, Smali, Python | JVM 17+ (CI: Temurin JDK 21 in `release.yml`), Python in `./venv/` (`requirements.txt`) |
 | **CI / Release Toolchain** | `semantic-release` ecosystem | `package.json` & `.releaserc` |
 
 
@@ -34,6 +34,8 @@ kveld-extra-morphe-patches/
 │       └── util/            # Patch list generator and runPatchTest runner (TargetApp registry)
 ├── extensions/              # MPE (Morphe Patch Extension) DEX Payloads
 │   └── extension/src/main/  # Companion Java runtime hooks (compiled to extension.mpe)
+├── harness/                 # Python Automated RE & Update Harness
+├── validation/              # Physical & Runtime ADB Test Harness
 ├── gradle/                  # Version catalogs and wrapper config
 ├── .agents/skills/          # Canonical agent runtime skills
 └── .github/                 # Actions CI/CD workflows and README generator
@@ -79,6 +81,15 @@ kveld-extra-morphe-patches/
    - **Failure & Guard Transparency**: If an early return occurs (missing feature, unsupported architecture, or optional inputs absent), log an explicit descriptive reason (`println("[Patch Name] Skipped: Reason...")`).
    - **Zero Loop Spam**: Never place `println` inside `walkTopDown()` or high-volume loops; aggregate deltas and report final saved KB/MB, pruned directories, or count metrics.
 
+5. **Fingerprint Scan Cost (Measured Performance Contract)**:
+   A fingerprint without `strings` or an exact `definingClass` lookup walks every method of the APK, and dexlib2 decodes a DEX string on every `name`, `definingClass`, `parameterTypes` or `type` access.
+   - **One Walk Per Target Family**: Never run several `custom` + `matchAll()` scans over the whole APK inside one patch. Run one candidate scan whose predicate is the union of the targets, then let each section filter the candidate list with its own unchanged predicate at its original point.
+   - **Cheap Checks First**: Inside call-site predicates, reject with `ins.opcode.referenceType != ReferenceType.METHOD` and a `ref.name` check (short string, set lookup) before touching `definingClass`, `parameterTypes` or `returnType`.
+   - **Iterate Only the Member Kind Needed**: In class-level predicates, iterating `classDef.methods` or `classDef.fields` decodes every member of every class. Use `directMethods` when the predicate requires `STATIC` (static methods are always direct in DEX) and `instanceFields`/`staticFields` when the field kind is known.
+   - **`matchAll()` Ignores `definingClass` as an Index**: In Morphe 1.8.0, `match()`/`.method` resolves an exact `definingClass` through a direct class lookup, but `matchAll()` still walks every class. Scope it with `fp.matchAll(classDefBy(TYPE))`.
+   - **Prefer Indexed Filters**: `strings` (and exact `definingClass` with `match()`) use the patcher's indexes; prefer them over `custom` lambdas whenever they express the same target.
+   - **Proof of Equivalence**: A performance-only change to a patch must produce byte-identical DEX output. Run `runPatchTest` on the same APK with `-PdexDigest=<file>` before and after the change and `diff` the two files (or compare the printed `[DIGEST]` aggregate); the runner output is deterministic. Profile before optimizing (`JAVA_TOOL_OPTIONS="-XX:StartFlightRecording=..."` with `--no-daemon`): the expensive part is often the member iteration, not the predicate itself.
+
 ---
 
 ## 3. Operational Workflow & Scope Discipline
@@ -91,7 +102,7 @@ INSPECT & BASELINE -> SCOPE LOCK -> MINIMAL IMPLEMENTATION -> QUALITY GATES -> A
 
 ### Step 1: `INSPECT & BASELINE`
 - Inspect working tree (`git status -s`). Distinguish pre-existing modifications from active task work.
-- Run baseline verification proportional to scope (e.g. `./gradlew check`).
+- Run baseline verification proportional to scope (e.g. `./venv/bin/python -m unittest discover harness/tests`, `./gradlew check`).
 - Classify any pre-existing failures (`PREEXISTING`, `ENVIRONMENT`) before modifying files.
 
 ### Step 2: `SCOPE LOCK`
@@ -163,11 +174,12 @@ For non-trivial logic, Smali hooks, native ARM64 patching (`*.so`), or shared co
 9. **Strict Privacy, PII & Diagnostic Output Sanitization**:
    - Never commit raw device diagnostic outputs, logcats, dumpsys logs, tombstones, screenshots, or crash traces to version control.
    - All runtime diagnostic dumps (`dumpsys jobscheduler`, `dumpsys alarm`) must be strictly filtered to the target package name (`PACKAGE_NAME`) to prevent leaking user Google accounts, installed third-party apps, or device hardware serials.
+   - Diagnostic HTTP servers and test runners must strictly bind to loopback (`127.0.0.1`) and never expose ports on `0.0.0.0` or local network interfaces.
 10. **Strict Secret & Environment Containment**:
     - Never commit `.env`, `local.properties`, private keys (`*.key`, `*.pem`), or signing keystores.
     - Local build and patcher outputs (`build/`, `morphe-temporary-files/`, `morphe-data/`, APKs) must remain excluded via `.gitignore` and are purged by `scripts/clean_workspace.sh`.
 11. **Metadata Synchronization Integrity**:
-    - When patch options, default values, or descriptions are modified in Kotlin source code, verify that patch catalog generator tasks (`./gradlew generatePatchesList`) are synchronized before release packaging.
+    - Do not run `./gradlew generatePatchesList` in the repository checkout: it rewrites the tracked `patches-list.json`, which the release pipeline regenerates (see item 1). When patch names, options, default values, or descriptions change, verify catalog registration by running the patch list generator against the built `.mpp` from a temporary working directory outside the repository, and confirm the expected entries appear.
 12. **DO NOT Declare Patch Tasks Complete Without the In-Situ Patching Gate**: see Section 3, Step 4 (`runPatchTest`, 100% success, zero fingerprint mismatches, zero smali compile errors).
 13. **Strict Prohibition of Emojis in Code, Scripts & Tooling**:
     - Under no circumstances should emojis or unicode pictographs be used anywhere in codebase source files, including Kotlin, Java, Python, Smali, Bash/Shell scripts, Gradle build files, configuration files, test files, diagnostic telemetry, or CLI/runtime logs.
@@ -203,6 +215,9 @@ For non-trivial logic, Smali hooks, native ARM64 patching (`*.so`), or shared co
 
 ### A. Fast Local / Unit Checks (Quality-Left)
 ```bash
+# Run Python harness unit tests (using project virtualenv)
+./venv/bin/python -m unittest discover harness/tests
+
 # Run AGP lint and Kotlin compile checks (use ./gradlew on Linux/macOS, gradlew.bat on Windows)
 ./gradlew check
 
@@ -228,3 +243,35 @@ For non-trivial logic, Smali hooks, native ARM64 patching (`*.so`), or shared co
 # Generate updated patches-list.json from compiled .mpp
 ./gradlew generatePatchesList
 ```
+
+### C. Reverse Engineering & Automated APK Audit
+```bash
+# Audit an APK non-destructively
+./venv/bin/python harness/update.py <path-to-apk> --audit
+
+# Execute minimal source update, build, and catalog sync
+./venv/bin/python harness/update.py <path-to-apk> --update
+```
+
+### D. Physical Device Runtime Harness (ADB)
+```bash
+# Run automated on-device smoke launch and install gate
+./venv/bin/python validation/smoke_install.py <path-to-apk>
+```
+
+#### Standing Authorization: Autonomous Physical-Device Smoke Testing
+On-device install/launch verification via attached ADB devices is pre-authorized
+standing (user grant, no per-step confirmation required). When a task requires
+validating a patched APK on hardware, the agent must perform the device test
+itself instead of asking the user to run it. Permitted without asking:
+`adb devices` discovery, pushing test APKs, `adb install` / `install -r`,
+launching the test package (`am start` / `monkey`), `logcat` capture scoped to
+the test package, `dumpsys package` reads, and screenshots of the test app.
+Destructive actions are limited to the package under active validation on the
+attached lab device: `adb uninstall` only when a signature or split conflict
+blocks installing the test build, never for unrelated packages, never
+factory reset, never touching other apps' data. Prefer reinstall (`-r`) to
+preserve data. Always report device model, package, actions taken, and the
+launch verdict (alive PID vs FATAL) as evidence in the final report.
+Triage lab bootstrap (Frida/JADX) is pre-authorized via `scripts/ensure_lab_frida.sh` (idempotent; supports `ANDROID_SERIAL` override; server does not survive reboot).
+
