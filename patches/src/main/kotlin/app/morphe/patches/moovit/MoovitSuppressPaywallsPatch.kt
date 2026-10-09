@@ -6,7 +6,10 @@ import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants.COMPATIBILITY_MOOVIT
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.iface.reference.StringReference
 
 private val blockPaywallGateFingerprint = Fingerprint(
     name = "a",
@@ -101,21 +104,40 @@ val moovitSuppressPaywallsPatch = bytecodePatch(
         )
         patched++
 
-        // 2. BlockPaywallActivity -> relaunch calling activity and return
+        // 2. BlockPaywallActivity -> dynamically resolve skip method and relaunch calling activity
+        val blockPaywallActivity = mutableClassDefBy("Lcom/moovit/app/plus/paywall/BlockPaywallActivity;")
+        val blockPaywallSkip = blockPaywallActivity.methods.singleOrNull { method ->
+            AccessFlags.PRIVATE.isSet(method.accessFlags) &&
+                method.parameterTypes.isEmpty() && method.returnType == "V" &&
+                method.implementation?.instructions?.any { instruction ->
+                    ((instruction as? ReferenceInstruction)?.reference as? MethodReference)
+                        ?.name == "getActivityToStartOnFinish"
+                } == true
+        } ?: error("Moovit: BlockPaywall skip method referencing getActivityToStartOnFinish not found.")
+
         blockPaywallActivityOnReadyFingerprint.method.addInstructions(
             0,
             """
-                invoke-direct {p0}, Lcom/moovit/app/plus/paywall/BlockPaywallActivity;->relaunchCallingActivity()V
+                invoke-direct {p0}, Lcom/moovit/app/plus/paywall/BlockPaywallActivity;->${blockPaywallSkip.name}()V
                 return-void
             """.trimIndent(),
         )
         patched++
 
-        // 3. Onboarding activity -> finish and relaunch helper Q0()
+        // 3. Onboarding activity -> dynamically resolve skip method and relaunch calling activity
+        val onboardingActivity = mutableClassDefBy("Lcom/moovit/app/plus/onboarding/MoovitPlusOnboardingActivity;")
+        val onboardingSkip = onboardingActivity.methods.singleOrNull { method ->
+            method.parameterTypes.isEmpty() && method.returnType == "V" &&
+                method.implementation?.instructions?.any { instruction ->
+                    ((instruction as? ReferenceInstruction)?.reference as? StringReference)
+                        ?.string == "activity_to_start_on_finish"
+                } == true
+        } ?: error("Moovit: onboarding skip method referencing 'activity_to_start_on_finish' not found.")
+
         moovitPlusOnboardingActivityFingerprint.method.addInstructions(
             0,
             """
-                invoke-virtual {p0}, Lcom/moovit/app/plus/onboarding/MoovitPlusOnboardingActivity;->Q0()V
+                invoke-virtual {p0}, Lcom/moovit/app/plus/onboarding/MoovitPlusOnboardingActivity;->${onboardingSkip.name}()V
                 return-void
             """.trimIndent(),
         )
