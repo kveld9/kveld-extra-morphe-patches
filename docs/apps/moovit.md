@@ -21,7 +21,7 @@ Technical documentation and patch catalog for Moovit on Android.
 
 | Patch Name | Typology | Default State | Dependencies | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Moovit Telemetry Manifest Purge` | Disables analytics and tracking services, providers, and receivers, and strips advertising permissions. |
+| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Moovit Telemetry Manifest Purge` | Neutralizes AppsFlyer, Braze, and Inneractive DEX dispatchers, disables analytics services/providers, and strips advertising permissions and AppKey. |
 | **Fix Google Maps** | `bytecodePatch` | `true` (Enabled) | None | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |
 | **Unlock Moovit+** | `bytecodePatch` | `true` (Enabled) | None | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |
 | **Moovit Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips advertising and tracking permissions, disables analytics services, providers, and receivers, and injects opt-out metadata in AndroidManifest.xml. |
@@ -71,10 +71,13 @@ The resource patch executes declarative AST transformations on `AndroidManifest.
 3. **Startup Initializer Removal**:
    Scans `androidx.startup.InitializationProvider` and purges child `<meta-data>` entries referencing Button SDK startup initializers (`ButtonSdkInitializer`).
 
-4. **Component Discovery Registrars**:
+4. **Hardcoded Attribution AppKey Removal**:
+   Purges `com.appsflyer.AppKey` from application `<meta-data>`, guaranteeing attribution kill independent of DEX drift.
+
+5. **Component Discovery Registrars**:
    Dependency injection registrars under `com.google.firebase.components.ComponentDiscoveryService` are intentionally preserved (0 removed). The dependency injection graph in Moovit is coupled; suppression is achieved safely via opt-out metadata flags and disabled service/provider components.
 
-5. **Opt-Out Metadata Injection**:
+6. **Opt-Out Metadata Injection**:
    Injects declarative configuration tags under `<application>` to disable SDK telemetry collection across initialization sequences:
    - `firebase_analytics_collection_enabled` = `false`
    - `firebase_analytics_collection_deactivated` = `true`
@@ -85,12 +88,49 @@ The resource patch executes declarative AST transformations on `AndroidManifest.
    - `google_analytics_adid_collection_enabled` = `false`
    - `google_analytics_default_allow_ad_personalization_signals` = `false`
 
+7. **Manifest Purge Totals**:
+   - 5 blocked permissions stripped.
+   - 18 tracking components disabled.
+   - 1 startup initializer removed.
+   - 1 hardcoded attribution app key removed.
+   - 8 opt-out metadata flags injected.
+
 ### B. Layer 2: Bytecode Dispatcher Neutralization Layer (`bytecodePatch`)
 
-The bytecode layer (`Block Telemetry & Trackers`) explicitly neutralizes 0 dispatch methods:
-- There is no concrete analytics dispatch class in base DEX for Moovit.
-- Manifest purge and declarative opt-out flags carry the entirety of tracker blocking.
-- Diagnostic telemetry emits standard log lines reporting 0 neutralized bytecode methods.
+The Dalvik bytecode layer neutralizes SDK event submission pipelines at execution time via explicit `Fingerprint(...).method.apply` hooks:
+
+1. **Targeted Entrypoint Hooks (10 Methods)**:
+   - **AppsFlyer (`Lcom/appsflyer/internal/AFa1tSDK;`)**:
+     - `start(Context)`: Rewritten to `return-void`.
+     - `start(Context, String)`: Rewritten to `return-void`.
+     - `start(Context, String, AppsFlyerRequestListener)`: Rewritten to `return-void`.
+     - `logEvent(Context, String, Map)`: Rewritten to `return-void`.
+     - `logEvent(Context, String, Map, AppsFlyerRequestListener)`: Rewritten to `return-void`.
+     *(Note: The public `AppsFlyerLib` facade is abstract in v6.18, so hooks target the verified concrete subclass; the explicit-Fingerprint gate fails loudly on drift).*
+   - **Braze (`Lcom/braze/Braze;`)**:
+     - `requestImmediateDataFlush()`: Rewritten to `return-void`.
+     - `openSession(Activity)`: Rewritten to `return-void`.
+     - `logCustomEvent(String, BrazeProperties)`: Rewritten to `return-void`.
+   - **Fyber Inneractive (`Lcom/fyber/inneractive/sdk/external/InneractiveAdManager;`)**:
+     - `initialize(Context, String)`: Rewritten to `return-void`.
+     - `wasInitialized()`: Rewritten to return `const/4 v0, 0x0` (`false`).
+
+2. **Deliberately NOT Hooked**:
+   - **Firebase Installations FID**: Push-breakage risk; accepted FCM dependency.
+   - **Kinesis uploader**: May carry live transit data required for transit navigation.
+   - **First-party `anonymousstream.moovitapp.com` / Zendesk**: Functional application requirements.
+   - **`openSession` overload variation**: Activity variant hooked; non-Activity variants not present in runtime path.
+
+3. **Device Traffic Re-Audit Outcome (Redmi Note 5, arm64)**:
+   Controlled experiment verifying cold start network egress:
+   - **Pre-fix Baseline**: Cold start generated network egress to `sdk.fra-01.braze.eu`, both AppsFlyer endpoints, and `cdn2.inner-active.mobi`.
+   - **Post-fix Verification**: Capture (993 packets, non-empty, live transit app traffic positively present) showed NONE of those endpoints.
+   - **Residuals Disposition**:
+     - Single Braze config handshake (~944B out): Dispatch, session, and flush entrypoints are all stubbed; `Braze.configure` does not exist in this SDK version so init kill is impossible via stable API; stubbing `getInstance` causes NullPointerException in app callers.
+     - Kinesis stream: Functional transit stream.
+     - Firebase Installations + Crashlytics-settings fetch: Push and crash dependencies.
+     - Zendesk: In-app support.
+     - Lab environment notice: `api.twitter.com` and `edge.prelude.dev` observed during network captures are unattributed lab-device background chatter (no Twitter or Prelude SDKs exist in Moovit DEX) and are explicitly NOT claimed as app traffic.
 
 ### C. Google Maps Signature Spoofing (`bytecodePatch` + Companion Extension)
 
@@ -110,6 +150,13 @@ Unlocks subscription entitlement gates and premium features locally:
 - **Subscription Package State**: Forces `com.moovit.app.subscription.premium.packages.a.b()` to return `SubscriptionPackageState.ACTIVE`.
 - **Safe Ride Feature Gate**: Forces `com.moovit.app.subscription.premium.packages.safety.b.a()` to return `SubscriptionPackageState.ACTIVE`.
 - **Favorite Location Address Search**: Flips constructor parameter `c` (`addAddressProvider`) from `false` to `true` in `FavoriteLocationEditorActivity.h1()`, enabling geocoded exact address searches rather than restricting favorite searches solely to transit stop identifiers.
+
+### E. Ad Suppression & Removal (`bytecodePatch`)
+
+Eliminates banner and inline advertisements across all views:
+- **Ad Unit Resolver Suppression**: Hooks `getAdUnitId(AdSource)` in `Lg3b;` (containing remote-config marker `"is_interstitial_ads_free_version"`) to return empty strings (`""`), neutralizing both primary and fallback remote ad inventory requests.
+- **MoovitAdView & MoovitBannerAdView View Suppression**: Hooks `setAdSource` on both banner classes (`com.moovit.app.ads.MoovitAdView` and `com.moovit.app.ads.MoovitBannerAdView`) to invoke `setVisibility(View.GONE)` before any view inflation or ad request initiation.
+- **Ad-Free Menu Item Suppression**: Injects `setVisibility(View.GONE)` in `AdFreeMenuItemFragment.onCreateView()` right before returning the inflated view hierarchy.
 
 ---
 
