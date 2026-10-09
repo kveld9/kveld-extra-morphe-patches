@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "patches": [
     {
       "name": "Block Telemetry & Trackers",
@@ -31,6 +31,126 @@
       "options": []
     },
     {
+      "name": "Block Telemetry & Trackers",
+      "description": "Disables analytics and tracking services, providers, and receivers, and strips advertising permissions.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Block Telemetry & Trackers",
+      "description": "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods plus MUTSDK receivers, disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Block Telemetry & Trackers",
+      "description": "Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.19.1-release.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Locale Slimmer",
+      "description": "Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "locales",
+          "title": "Locales to keep",
+          "description": "Comma-separated language codes to preserve (e.g. 'en, es, pt, fr, de'). Base fallback and English are always retained.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "en",
+          "values": null
+        }
+      ]
+    },
+    {
       "name": "MLKit Vision Slimmer",
       "description": "Disable MLKit component discovery and registrars. WARNING: this breaks in-app QR and barcode scanning.",
       "default": false,
@@ -46,6 +166,166 @@
           "targets": [
             {
               "version": "447.0.0.55.81",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "PowerPoint Companion Native Slimmer",
+      "description": "Strips optional companion native binaries (React Native and Hermes JavaScript runtime stack) via in-situ zeroing. WARNING: stripped libraries are load-bearing for React Native initialization - enabling this WILL crash the app with UnsatisfiedLinkError when Copilot or other React Native surfaces start, not merely hide those features.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "PowerPoint DPI Slimmer",
+      "description": "Strips drawables for unselected screen densities from PowerPoint base APK while preserving launcher icons and single-density assets. WARNING: Displays matching stripped densities will scale preserved assets.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "dpi",
+          "title": "Target screen density",
+          "description": "Screen density to preserve (ldpi, mdpi, tvdpi, hdpi, xhdpi, xxhdpi, xxxhdpi). Default is xxhdpi.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "xxhdpi",
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "PowerPoint Locale Slimmer",
+      "description": "Strips unselected localized resource directories (res/values-<locale>/) from PowerPoint base APK. English (en, en-us) is always retained. WARNING: Application strings for stripped locales will fall back to English.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "locales",
+          "title": "Locales to keep",
+          "description": "Comma-separated language codes to preserve (e.g. 'en, es, fr, de'). English fallback (en, en-us) is always retained.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "en",
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "Screen Density Slimmer",
+      "description": "Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "density",
+          "title": "Target screen density",
+          "description": "Screen density to preserve (e.g. 'xxhdpi', 'xhdpi', 'hdpi', 'mdpi', 'xxxhdpi'). Single-density orphans, launcher icons, and nodpi/anydpi are always protected.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "xxhdpi",
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "X MLKit Vision Slimmer",
+      "description": "Disables MLKit component discovery and registrars. WARNING: this breaks in-app QR and barcode scanning.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.19.1-release.0",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
