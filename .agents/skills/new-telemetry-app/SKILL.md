@@ -468,3 +468,10 @@ Every completed unit of work must be committed immediately as an isolated, indep
 - **Direct Commit**: Commit completed units autonomously upon satisfying verification gates.
 - **Strict No-Push**: NEVER execute `git push` autonomously. Pushing is reserved strictly for explicit user instructions.
 - **Strict No-PR**: Never generate PR titles, PR descriptions, or suggest opening PRs.
+
+### D. Mandatory Post-Close Adversarial Audit (audit-stack)
+After all commits in A are landed, automatically run the `audit-stack` skill against the onboarding changeset. This step is part of the pass, not optional, and requires no user prompt.
+1. **Scope**: Strictly the onboarding scope — `patches/.../<app_id>/`, `docs/apps/<app_id>.md`, and the app's hunks in `Constants.kt` / `PatchExecutionTest.kt` / `README.md`. Explicitly exclude `FOREIGN_IN_PROGRESS_WORK` (uncommitted files and directories outside the app scope); never stage, modify, or report foreign work as part of this audit.
+2. **Remediation precedence**: `audit-stack`'s autonomous fix loop runs through the AGY delegation in force — fixes are applied by the same AGY worker conversations (steered with concrete findings), gates are executed by the orchestrator. Never fix project files directly from the orchestrator; never use another harness's subagents for implementation.
+3. **Fix commits**: Each confirmed fix lands as its own `fix(<app_id>): ...` commit after re-running the Section 6 gates. Loop until the audit reports zero blocking findings.
+4. No push / no PR (per C).
