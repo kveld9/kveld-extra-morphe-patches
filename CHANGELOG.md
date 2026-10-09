@@ -1,3 +1,23 @@
+## [1.4.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-09)
+
+### Bug Fixes
+
+* **moovit:** neutralize in-process telemetry dispatchers and strip AppsFlyer key ([2870b6c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2870b6ceab7b47443867ef6b6c62b737d693b23a))
+* **powerpoint:** add diagnostic telemetry logging to new patches ([e7f096c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e7f096c64c16066edd2dea08ce6764b0499cd919))
+* **tooling:** exempt declaration-only files from patch logging gate ([532cd62](https://github.com/kveld9/kveld-extra-morphe-patches/commit/532cd624e491ad9fb13100135f5c582fd1493ed8))
+
+### New Features
+
+* **moovit:** add custom maps API key option to Fix Google Maps patch ([fbdec42](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fbdec428bc214aa5c45e40f2678b338c977b31e0))
+* **moovit:** add Fix Google Maps patch to restore map rendering ([7560d48](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7560d48e313bd15f837a312cd19cc6f3d9a683e5))
+* **moovit:** add Remove Ads patch to suppress banner and inline ads ([438dd61](https://github.com/kveld9/kveld-extra-morphe-patches/commit/438dd61673dc6dd45de9bbc4f96cf1cc415105b5))
+* **moovit:** add Suppress Paywalls patch to disable upgrade dialogs and cards ([a70634c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a70634cd9b3b7301a40495c22fcf3f2aaa24832d))
+* **moovit:** add Unlock Moovit+ patch for premium features and address search ([1c4554b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/1c4554b00630a2aff7f36187322d2398d79eade3))
+
+### Code Refactoring
+
+* **moovit:** dynamically resolve paywall skip methods in Suppress Paywalls ([fa2e65f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fa2e65f4e7fa4bc7575cfe7e797286aa6476281b))
+
 ## [1.3.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.2.0...v1.3.0) (2026-10-09)
 
 ### Bug Fixes

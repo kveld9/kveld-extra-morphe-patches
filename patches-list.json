@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "patches": [
     {
       "name": "Block Telemetry & Trackers",
@@ -32,7 +32,7 @@
     },
     {
       "name": "Block Telemetry & Trackers",
-      "description": "Disables analytics and tracking services, providers, and receivers, and strips advertising permissions.",
+      "description": "Neutralizes AppsFlyer, Braze, and Inneractive DEX dispatchers, disables analytics services/providers, and strips advertising permissions.",
       "default": true,
       "dependencies": [
         "ResourcePatch"
@@ -165,6 +165,44 @@
         }
       ],
       "options": []
+    },
+    {
+      "name": "Fix Google Maps",
+      "description": "Restores Google Maps rendering by spoofing the original package signature to Google Play Services.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "mapsApiKey",
+          "title": "Google Maps Platform API key",
+          "description": "Optional custom Google Maps Platform key. When omitted, built-in keys work automatically via signature spoofing.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": null,
+          "values": null
+        }
+      ]
     },
     {
       "name": "Locale Slimmer",
@@ -327,6 +365,32 @@
       ]
     },
     {
+      "name": "Remove Ads",
+      "description": "Hides banner and inline ads and neutralizes ad unit ID lookups.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Remove Shared User ID",
       "description": "Removes the sharedUserId attribute from the manifest to prevent installation conflicts.",
       "default": true,
@@ -389,6 +453,32 @@
       ]
     },
     {
+      "name": "Suppress Paywalls",
+      "description": "Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Unlock 365 Family",
       "description": "Unlocks Microsoft 365 Family subscription features locally.",
       "default": true,
@@ -404,6 +494,32 @@
           "targets": [
             {
               "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock Moovit+",
+      "description": "Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.tranzmate",
+          "name": "Moovit",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#1864E4",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "5.201.1.1809",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,

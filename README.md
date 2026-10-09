@@ -55,13 +55,13 @@
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Disables analytics and tracking services, providers, and receivers, and strips advertising permissions. |  |
+| **Block Telemetry & Trackers** | Neutralizes AppsFlyer, Braze, and Inneractive DEX dispatchers, disables analytics services/providers, and strips advertising permissions. |  |
 | **Fix Google Maps** | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. | • Google Maps Platform API key |
-| **Unlock Moovit+** | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |  |
-| **Remove Ads** | Hides banner and inline ads and neutralizes ad unit ID lookups. |  |
-| **Suppress Paywalls** | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |  |
 | **Locale Slimmer** | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. | • Locales to keep |
+| **Remove Ads** | Hides banner and inline ads and neutralizes ad unit ID lookups. |  |
 | **Screen Density Slimmer** | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. | • Target screen density |
+| **Suppress Paywalls** | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |  |
+| **Unlock Moovit+** | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |  |
 
 </details>
 
