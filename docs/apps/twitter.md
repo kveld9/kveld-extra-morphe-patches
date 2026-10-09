@@ -13,7 +13,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **Target Version** | `12.19.1-release.0` |
 | **Target Package Format** | APKM (Split APK Bundle) |
 | **Primary Architecture** | `arm64-v8a` |
-| **Authoritative Source** | APKMirror |
+| **Authoritative Source** | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-19-1-release-0-release/) |
 
 ---
 

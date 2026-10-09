@@ -13,7 +13,7 @@ Technical documentation and patch catalog for Moovit on Android.
 | **Target Version** | `5.201.1.1809` |
 | **Target Package Format** | APKM (Split APK Bundle) |
 | **Primary Architecture** | `arm64-v8a` |
-| **Authoritative Source** | APKMirror |
+| **Authoritative Source** | [APKMirror](https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/moovit-your-transit-tracker-5-201-1-1809-release/) |
 
 ---
 

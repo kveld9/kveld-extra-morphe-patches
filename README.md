@@ -34,8 +34,8 @@
 | App | Package | Target Version | Variant | Download Source | Guide |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Instagram | `com.instagram.android` | 447.0.0.55.81 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-447-0-0-55-81-release/) | [Instagram Guide](docs/apps/instagram.md) |
-| X | `com.twitter.android` | 12.19.1-release.0 | APKM bundle (`arm64-v8a`) | APKMirror | [X Guide](docs/apps/twitter.md) |
-| Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | APKMirror | [Moovit Guide](docs/apps/moovit.md) |
+| X | `com.twitter.android` | 12.19.1-release.0 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-19-1-release-0-release/) | [X Guide](docs/apps/twitter.md) |
+| Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/moovit-your-transit-tracker-5-201-1-1809-release/) | [Moovit Guide](docs/apps/moovit.md) |
 | PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-16-0-20527-20034-release/) | [PowerPoint Guide](docs/apps/powerpoint.md) |
 
 ## Patches
@@ -122,8 +122,6 @@
 
 | Guide | Description |
 | :--- | :--- |
-| [X Guide](docs/apps/twitter.md) | Target compatibility, patch catalog, and telemetry/manifest breakdown for X. |
-| [Moovit Guide](docs/apps/moovit.md) | Target compatibility, patch catalog, Maps signature spoofing, Moovit+ unlock, and ads/paywall suppression. |
 | [Building & Development](docs/building.md) | Toolchain prerequisites, Gradle build tasks, in-situ patching gate, and catalog synchronization. |
 | [Project Scope](docs/out-of-scope.md) | Compile-time invariants, single-version policy, and rejected feature categories. |
 
