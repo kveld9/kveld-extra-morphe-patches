@@ -22,6 +22,7 @@
 | :--- | :--- | :--- |
 | Instagram | `com.instagram.android` | 447.0.0.55.81 |
 | X | `com.twitter.android` | 12.19.1-release.0 |
+| Moovit | `com.tranzmate` | 5.201.1.1809 |
 | PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 |
 
 ## Patches

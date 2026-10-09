@@ -45,6 +45,7 @@ object Constants {
             )
         )
     )
+
     const val TWITTER_PACKAGE_NAME = "com.twitter.android"
     const val TWITTER_TARGET_VERSION = "12.19.1-release.0"
 
@@ -57,6 +58,22 @@ object Constants {
             AppTarget(
                 version = TWITTER_TARGET_VERSION,
                 description = "Download com.twitter.android v\$TWITTER_TARGET_VERSION (APKM) from APKMirror",
+            )
+        )
+    )
+
+    const val MOOVIT_PACKAGE_NAME = "com.tranzmate"
+    const val MOOVIT_TARGET_VERSION = "5.201.1.1809"
+
+    val COMPATIBILITY_MOOVIT = Compatibility(
+        name = "Moovit",
+        packageName = MOOVIT_PACKAGE_NAME,
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x1864E4,
+        targets = listOf(
+            AppTarget(
+                version = MOOVIT_TARGET_VERSION,
+                description = "Download com.tranzmate v\$MOOVIT_TARGET_VERSION (APKM) from APKMirror",
             )
         )
     )
