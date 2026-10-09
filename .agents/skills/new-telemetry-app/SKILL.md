@@ -29,7 +29,7 @@ description: End-to-end workflow for onboarding a new target app and authoring t
   - Never embed third-party media download engines, torrent clients, or custom UI skins inside host applications.
 - **Single Target Version Invariant**:
   - Every target application must target strictly ONE active upstream version.
-  - When upstream ships distinct 32-bit and 64-bit builds (e.g. `armeabi-v7a` and `arm64-v8a`), configure ONE `AppTarget` entry per ABI variant under that exact same upstream version in `targets = listOf(...)`.
+  - When upstream ships distinct 32-bit and 64-bit builds (e.g. `armeabi-v7a` and `arm64-v8a`), configure a SINGLE `AppTarget` entry for that upstream version with `versionCodes = mapOf(...)` keyed by ABI variant when applicable in `targets = listOf(...)`.
   - Never retain legacy fallback code or multi-version compatibility matrices for older versions. When upstream updates, bump the target version and retire the old version immediately.
 
 ---
@@ -62,7 +62,7 @@ description: End-to-end workflow for onboarding a new target app and authoring t
 ## 3. Recon Procedure
 
 ### A. Artifact Placement
-Place candidate APK, APKM, or XAPK files into `candidate-apks/` (note: some companion repositories use `candidate_apks/`; keep `candidate-apks/` with hyphen for this repository and preserve cross-repo directory naming without renaming folders). Never commit raw binary APKs to version control.
+Place candidate APK, APKM, or XAPK files into `candidate_apks/` (the Morphe patch runner specifically resolves `candidate_apks/` when running without an explicit `-Papk` parameter). Never commit raw binary APKs to version control.
 
 ### B. Badging & Version Metadata Extraction
 Extract target package name, version name, version code, and SDK requirements:
@@ -70,7 +70,7 @@ Extract target package name, version name, version code, and SDK requirements:
 ```bash
 # Derive aapt2 dynamically from local.properties sdk.dir if not in PATH:
 AAPT2="$(grep '^sdk.dir=' local.properties | cut -d= -f2)/build-tools/$(ls $(grep '^sdk.dir=' local.properties | cut -d= -f2)/build-tools | sort -V | tail -n 1)/aapt2"
-"${AAPT2:-aapt2}" dump badging candidate-apks/<app>.apk | grep -E "(package: name=|versionCode=|versionName=|sdkVersion:)"
+"${AAPT2:-aapt2}" dump badging candidate_apks/<app>.apk | grep -E "(package: name=|versionCode=|versionName=|sdkVersion:)"
 ```
 
 Record the following metadata:
@@ -84,7 +84,8 @@ Record the following metadata:
 Dump the decoded manifest tree to a scratch path outside git tracking:
 
 ```bash
-"${AAPT2:-aapt2}" dump xmltree --file AndroidManifest.xml candidate-apks/<app>.apk > scratch/manifest_tree.txt
+mkdir -p scratch
+"${AAPT2:-aapt2}" dump xmltree --file AndroidManifest.xml candidate_apks/<app>.apk > scratch/manifest_tree.txt
 ```
 
 ### D. Telemetry Component Inventory
@@ -120,7 +121,7 @@ Component scanners (App Manager, Exodus Privacy) frequently flag Google ML Kit c
 When the target application bundles native libraries:
 1. Inspect bundled native libraries:
    ```bash
-   unzip -l candidate-apks/<app>.apk "lib/*"
+   unzip -l candidate_apks/<app>.apk "lib/*"
    ```
 2. Scan for embedded telemetry endpoints in native binaries:
    ```bash
@@ -136,7 +137,7 @@ Scan DEX files with `androguard` to locate stable SDK entrypoints and verify exa
 ./venv/bin/python -c '
 from androguard.core.apk import APK
 from androguard.core.dex import DEX
-apk = APK("candidate-apks/<app>.apk")
+apk = APK("candidate_apks/<app>.apk")
 for dex_bytes in apk.get_all_dex():
     dex = DEX(dex_bytes)
     for cls in dex.get_classes():
@@ -163,7 +164,7 @@ When signatures shift or cannot be identified via simple grep:
 - **`jadx-gui` (Static Triage)**: Open APK in jadx, follow Xrefs from string constants or log messages, and identify the shifted method signature.
 - **`frida` / `jnitrace` (Dynamic Lab Triage)**: Attach to the target process on the lab device to confirm whether candidate methods execute during user interactions before writing hooks.
 
-Always store intermediate recon dumps in `scratch/` or `<appDataDir>/brain/<conversation-id>/scratch/`. Never commit raw scan outputs.
+Always store intermediate recon dumps in `scratch/` (ensuring `mkdir -p scratch` first) or `<appDataDir>/brain/<conversation-id>/scratch/`. Never commit raw scan outputs.
 
 ---
 
@@ -203,7 +204,7 @@ object Constants {
 }
 ```
 
-**Single Version / ABI Variant Rule**: Maintain strictly ONE upstream version. If upstream ships separate 32-bit and 64-bit APKs, declare one `AppTarget` per ABI variant under the same upstream version.
+**Single Version / ABI Variant Rule**: Maintain strictly ONE upstream version. If upstream ships separate 32-bit and 64-bit APKs, declare a single `AppTarget` entry with `versionCodes = mapOf(...)` keyed by ABI variant under that upstream version.
 
 ### B. Runner Registry (`PatchExecutionTest.kt`) & Mapping Invariant
 File: `patches/src/main/kotlin/util/PatchExecutionTest.kt`
@@ -338,19 +339,19 @@ Execute Morphe Patcher against the target APK with all patches active:
 
 ```bash
 # Execute patch test by registered target app id and candidate APK
-./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate_apks/<app>.apk
 
 # Force all boolean patch options on (covers opt-in toggles)
-./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -PallOptions=true
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate_apks/<app>.apk -PallOptions=true
 
 # Byte-identical DEX proof for performance or refactor changes
-./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -PdexDigest=build/digest-before.txt
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate_apks/<app>.apk -PdexDigest=build/digest-before.txt
 ```
 
 #### Quiet Gate Invocation (Agent Standard)
 Always redirect full output to a git-ignored file in `build/` and inspect the verdict:
 ```bash
-./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -PallOptions=true --console=plain > build/patchtest-<app_id>.log 2>&1; rc=$?; sed -n '/FINAL PATCHING RESULT/,$p' build/patchtest-<app_id>.log | grep -v '^\s*at ' || tail -40 build/patchtest-<app_id>.log; echo "exit=$rc"
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate_apks/<app>.apk -PallOptions=true --console=plain > build/patchtest-<app_id>.log 2>&1; rc=$?; sed -n '/FINAL PATCHING RESULT/,$p' build/patchtest-<app_id>.log | grep -v '^\s*at ' || tail -40 build/patchtest-<app_id>.log; echo "exit=$rc"
 ```
 
 #### Gate Pass Criteria
@@ -376,10 +377,10 @@ Verify modifications on the actual output APK artifacts rather than trusting std
 
 ```bash
 # Generate signed and aligned output APK
-./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -DoutputApk=build/test-<app_id>.apk
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate_apks/<app>.apk -Pout=build/test-<app_id>.apk
 ```
 
-*Note*: `-DoutputApk` paths work with or without the `.apk` extension per the runner's path normalization logic (e.g. `-DoutputApk=build/test` normalizes to `build/test.apk`).
+*Note*: `-Pout` specifies the output APK path. Without `-Pout`, the test runner will not write the output APK to disk. For APKM/XAPK split targets, the runner writes the base APK to `build/test-<app_id>.apk` and separate signed splits to `build/test-<app_id>.<split>.apk`.
 
 #### Verification Commands
 ```bash
@@ -407,7 +408,7 @@ For target applications integrated with the automated update harness (`harness/u
 ./venv/bin/python harness/update.py --doctor
 
 # Non-destructive audit of a new target APK version
-./venv/bin/python harness/update.py candidate-apks/<new-apk> --audit
+./venv/bin/python harness/update.py candidate_apks/<new-apk> --audit
 ```
 *Note*: Applications without a dedicated harness pipeline are audited manually and validated via `./gradlew runPatchTest -Papp=<app_id>`.
 
@@ -416,14 +417,17 @@ For target applications integrated with the automated update harness (`harness/u
 ## 7. Device Validation & Traffic Audit
 
 ### A. Automated ADB Smoke Install Gate
-Use `validation/smoke_install.py` against a connected Android device matching the target ABI (`arm64-v8a`) and minimum SDK. Always install the fused patched APK generated in `build/test-<app_id>.apk`:
+Use `validation/smoke_install.py` against a connected Android device matching the target ABI (`arm64-v8a`) and minimum SDK. Install the generated APK(s) in `build/`: for standalone APKs, pass the single `build/test-<app_id>.apk`; for APKM/XAPK targets where split APKs were produced (`build/test-<app_id>.<split>.apk`), pass both base and all generated splits (`build/test-<app_id>*.apk`) so `smoke_install.py` performs an `install-multiple`:
 
 ```bash
-# Single standalone APK or fused bundle
+# Single standalone APK or base plus splits
 ./venv/bin/python validation/smoke_install.py build/test-<app_id>.apk --uninstall-on-conflict
 
+# Multiple APKs (base + splits for bundle targets)
+./venv/bin/python validation/smoke_install.py build/test-<app_id>*.apk --uninstall-on-conflict
+
 # Explicit device serial if multiple devices are attached
-./venv/bin/python validation/smoke_install.py build/test-<app_id>.apk --serial <serial> --uninstall-on-conflict
+./venv/bin/python validation/smoke_install.py build/test-<app_id>*.apk --serial <serial> --uninstall-on-conflict
 ```
 
 #### Post-Test Cleanup
@@ -514,7 +518,7 @@ Every completed unit of work must be committed immediately as an isolated, indep
 - **Strict No-PR**: Never generate PR titles, PR descriptions, or suggest opening PRs.
 
 ### D. Mandatory Post-Close Adversarial Audit (audit-stack)
-After all commits in A are landed, automatically run the `audit-stack` skill against the onboarding changeset before pushing (`origin/<base>..HEAD`). Never run per-commit auto-audits.
+After all commits in A are landed, automatically run the `audit-stack` skill against the onboarding changeset before closing the task (auditing the pending range, e.g. `origin/<base>..HEAD`). Never run per-commit auto-audits.
 1. **Scope**: Strictly the onboarding scope — `patches/.../<app_id>/`, `docs/apps/<app_id>.md`, and the app's hunks in `Constants.kt` / `PatchExecutionTest.kt` / `README.md`. Explicitly exclude `FOREIGN_IN_PROGRESS_WORK` (uncommitted files and directories outside the app scope); never stage, modify, or report foreign work as part of this audit.
 2. **Remediation precedence**: `audit-stack`'s autonomous fix loop runs through the AGY delegation in force — fixes are applied by the same AGY worker conversations (steered with concrete findings), gates are executed by the orchestrator. Never fix project files directly from the orchestrator; never use another harness's subagents for implementation.
 3. **Fix commits**: Each confirmed fix lands as its own `fix(<app_id>): ...` commit after re-running the Section 6 gates. Loop until the audit reports zero blocking findings.
