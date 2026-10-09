@@ -9,7 +9,7 @@ import java.io.RandomAccessFile
 @Suppress("unused")
 val powerPointCompanionSoSlimmerPatch = rawResourcePatch(
     name = "PowerPoint Companion Native Slimmer",
-    description = "Strips optional companion native binaries (React Native and Hermes JavaScript runtime stack) via in-situ zeroing. WARNING: In-app features reliant on React Native components (such as Copilot chat panels) will fail to load.",
+    description = "Strips optional companion native binaries (React Native and Hermes JavaScript runtime stack) via in-situ zeroing. WARNING: stripped libraries are load-bearing for React Native initialization - enabling this WILL crash the app with UnsatisfiedLinkError when Copilot or other React Native surfaces start, not merely hide those features.",
     default = false,
 ) {
     compatibleWith(Constants.COMPATIBILITY_POWERPOINT)
