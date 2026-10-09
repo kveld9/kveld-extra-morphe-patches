@@ -5,9 +5,16 @@ description: Technical methodology and implementation patterns for telemetry, tr
 
 # Telemetry Blocking Implementation Guidelines
 
-## 1. Analysis Methodology
+## 1. Analysis Methodology (Hybrid Discovery Model)
 
 Telemetry blocking enforces defense-in-depth neutralization of tracking, analytics, attribution, advertising, and crash-reporting frameworks without breaking core application functionality.
+
+To achieve exhaustive coverage across both commercial SDKs and in-house proprietary pipelines, apply a **Hybrid Discovery Model**:
+1. **Automated Third-Party Discovery (Exodus Privacy Database)**:
+   - Query the [Exodus Privacy Trackers API](https://reports.exodus-privacy.eu.org/api/trackers) (`etip` / `trackers.json`) to enumerate known commercial tracker package signatures (e.g. AppLovin, IronSource, Unity Ads, Adjust, AppsFlyer, Vungle, InMobi, Kochava, Singular) present in the target APK's DEX and Manifest.
+   - Categorize findings into `analytics`, `advertisement`, `identification`, and `profiling`.
+2. **First-Party & Proprietary Telemetry Reversing**:
+   - Manually audit vendor-specific in-house analytics, ad measurement, and telemetry dispatchers (e.g. Microsoft OneDS/Aria/MUTSDK/AdMeasurement, Meta Analytics2, ByteDance AppLog) that are not distributed as third-party SDKs and therefore absent from public tracker catalogs.
 
 ### A. Manifest Inventory
 Audit the decompiled `AndroidManifest.xml` tree to identify tracking entrypoints across five distinct structural categories:
@@ -36,18 +43,19 @@ Audit the decompiled `AndroidManifest.xml` tree to identify tracking entrypoints
    - First-party upload pipelines: `com.facebook.analytics2.logger.*UploadService`, `com.facebook.analytics2.fabric.onefabric.FFAlarmUploadJobService`
    - Attribution services: `com.appsflyer.internal.service.AFJobSchedulerService`
 
-4. **Broadcast Receivers (`<receiver>`)**:
+4. **Broadcast Receivers & Activities (`<receiver>`, `<activity>`)**:
    - Referrer receivers: `com.adjust.sdk.AdjustReferrerReceiver`, `com.appsflyer.SingleInstallBroadcastReceiver`, `com.appsflyer.MultipleInstallBroadcastReceiver`
    - Measurement receivers: `com.google.android.gms.measurement.AppMeasurementReceiver`, `com.google.android.gms.measurement.AppMeasurementInstallReferrerReceiver`
    - Alarm dispatchers: `com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver`, `com.facebook.analytics2.fabric.onefabric.OneFabricUploadAlarmReceiver`
+   - Cross-Sell & Campaign Targeting: in-app promotion receivers/activities (e.g. `*CrossSellReceiver`, `*CrossSellHandlerActivity`, `*CampaignReceiver`, `*FloodgateDynamicUxActivity`, `*InstallBroadcastReceiver`).
 
 5. **Component Discovery Registrars (`<meta-data>`)**:
    - Firebase/DI component discovery: child `<meta-data>` entries inside `com.google.firebase.components.ComponentDiscoveryService` declaring registrars (e.g. `AnalyticsRegistrar`, `CrashlyticsRegistrar`, `PerfRegistrar`).
 
 ### B. DEX Scan for Stable SDK Classes
-Inspect DEX bytecodes to locate stable public entrypoints and first-party upload dispatchers:
+Inspect DEX bytecodes to locate stable public entrypoints, ad measurement classes, and first-party upload dispatchers:
 
-1. **Third-Party Analytics & Attribution SDKs**:
+1. **Third-Party Analytics & Attribution SDKs (Cross-referenced with Exodus signatures)**:
    - Firebase Analytics: `Lcom/google/firebase/analytics/FirebaseAnalytics;->logEvent(Ljava/lang/String;Landroid/os/Bundle;)V`
    - Google AppMeasurement: `Lcom/google/android/gms/measurement/AppMeasurement;->logEventInternal(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)V`
    - Adjust SDK: `Lcom/adjust/sdk/PackageHandler;->addPackage(Lcom/adjust/sdk/ActivityPackage;)V`, `sendFirstPackage()V`
@@ -59,7 +67,13 @@ Inspect DEX bytecodes to locate stable public entrypoints and first-party upload
 2. **First-Party Analytics & Dispatchers**:
    - Meta / Instagram: `Lcom/instagram/analytics/analytics2/IgAnalytics2TaskBasedUploader;->HZG(LX/KpT;LX/ArQ;LX/Av0;)V`, `Lcom/instagram/analytics/analytics2/IGAnalytics2SimpleUploader;->HZG(...)V`, `Lcom/facebook/analytics2/logger/legacy/uploader/PrivacyControlledUploader;->HZG(...)V`
    - ByteDance / TikTok: `Lcom/ss/android/common/applog/AppLog;->onEvent(...)V`, `onEventV3(...)V`, `sendEvent(...)V`, `Lcom/bytedance/applog/AppLog;->onEventV3(...)V`
+   - Microsoft OneDS / Aria / MUTSDK: `LifecycleHandler`, `AggregatedMetric`, `SendAggregationTimerTask`, `HardwareInformationReceiver`, `PowerInfoReceiver`
    - Brave Browser: `Lorg/chromium/components/prefs/PrefService;->e(Ljava/lang/String;)Z` (telemetry preference gatekeeper)
+
+3. **Ad Measurement Platforms & Advertising Identifiers**:
+   - Scan for classes matching `*admeasurement*`, `*admobile*`, `*adpartner*`, `*attribution*`, `*advertisingid*`, `*appsetid*`.
+   - Scan for methods retrieving advertising IDs: `getAIFA()`, `getAppSetId()`, `getAdvertisingId()`, `getGaid()`, `getAdvertisingIdInfo()`.
+   - Target: `Lcom/microsoft/office/adsmobile_admeasurementpartner/admeasurement/AdMeasurementPlatformData;->getAIFA()Ljava/lang/String;`, `->getAppSetId()Ljava/lang/String;`.
 
 ### C. Preservation Rules (Mandatory Invariants)
 Telemetry patches must preserve all functional application systems:
@@ -245,7 +259,26 @@ Neutralize event dispatchers at Dalvik bytecode level using verified dexlib2 fin
    }
    ```
 
-5. **Register Stability**:
+5. **Advertising Identifier & Attribution Nullification**:
+   Force return empty string `""` or `null` for advertising identifier getters (e.g. `getAIFA`, `getAppSetId`, `getAdvertisingId`) to break tracking payloads if background requests survive:
+   ```kotlin
+   Fingerprint(
+       definingClass = "Lcom/microsoft/office/adsmobile_admeasurementpartner/admeasurement/AdMeasurementPlatformData;",
+       name = "getAIFA",
+       returnType = "Ljava/lang/String;",
+       parameters = emptyList(),
+   ).method.apply {
+       clearTryBlocks()
+       ensureRegisterCount(1)
+       implementation?.let { removeInstructions(0, it.instructions.count()) }
+       addInstructions(0, """
+           const-string v0, ""
+           return-object v0
+       """)
+   }
+   ```
+
+6. **Register Stability**:
    Standard non-range invokes (`invoke-*`) can only reference registers `v0`-`v15`. In methods with high register counts (`.registers 18`), parameter registers `p0`, `p1`, etc., map to high indices (`v16`, `v17`). To pass parameters safely, use `invoke-*/range` or copy high registers into low temporary registers first.
 
 ### D. Zero-Zombie Rule (Definitive Gate Invariant)
