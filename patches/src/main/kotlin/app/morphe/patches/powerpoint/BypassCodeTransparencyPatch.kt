@@ -15,6 +15,7 @@ val powerPointBypassCodeTransparencyPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_POWERPOINT)
 
     execute {
+        var patched = 0
         codeTransparencyCheckFingerprint.method.apply {
             clearTryBlocks()
             implementation?.let { removeInstructions(0, it.instructions.count()) }
@@ -22,6 +23,8 @@ val powerPointBypassCodeTransparencyPatch = bytecodePatch(
                     invoke-interface {p2}, Lcom/microsoft/office/apphost/CodeTransparencyCheckCallback;->transparencyVerificationSucceeded()V
                     return-void
                 """)
+            patched++
         }
+        println("[Bypass Code Transparency] Applied $patched hooks -> code transparency checks bypassed.")
     }
 }

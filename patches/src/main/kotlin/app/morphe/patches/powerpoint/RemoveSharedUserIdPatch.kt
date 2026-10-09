@@ -14,9 +14,13 @@ val powerPointRemoveSharedUserIdPatch = resourcePatch(
 
     execute {
         document("AndroidManifest.xml").use { doc ->
-            val manifest = doc.getElementsByTagName("manifest").item(0) as Element
+            val manifest = doc.getElementsByTagName("manifest").item(0) as? Element ?: run {
+                println("[Remove Shared User ID] Skipped: manifest root element not found.")
+                return@execute
+            }
             manifest.removeAttribute("android:sharedUserId")
             manifest.removeAttribute("android:sharedUserLabel")
+            println("[Remove Shared User ID] Stripped sharedUserId and sharedUserLabel attributes from manifest.")
         }
     }
 }

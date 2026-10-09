@@ -16,6 +16,8 @@ val powerPointDisableLoginRequirementPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_POWERPOINT)
 
     execute {
+        var patched = 0
+
         firstRunM0Fingerprint.method.apply {
             clearTryBlocks()
             ensureRegisterCount(2)
@@ -27,6 +29,7 @@ val powerPointDisableLoginRequirementPatch = bytecodePatch(
                 invoke-interface {p2, v0}, Lcom/microsoft/office/officehub/objectmodel/IOnTaskCompleteListener;->onTaskComplete(Lcom/microsoft/office/officehub/objectmodel/TaskResult;)V
                 return-void
             """)
+            patched++
         }
 
         firstRunN0Fingerprint.method.apply {
@@ -40,6 +43,7 @@ val powerPointDisableLoginRequirementPatch = bytecodePatch(
                 invoke-static {v0, v1}, Lcom/microsoft/office/officehub/util/OHubSharedPreferences;->setFTUXShown(Landroid/content/Context;Z)V
                 return-void
             """)
+            patched++
         }
 
         ftuxPaywallLauncherFingerprint.method.apply {
@@ -53,6 +57,7 @@ val powerPointDisableLoginRequirementPatch = bytecodePatch(
                 invoke-interface {p2, v0}, Lcom/microsoft/office/officehub/objectmodel/IOnTaskCompleteListener;->onTaskComplete(Lcom/microsoft/office/officehub/objectmodel/TaskResult;)V
                 return-void
             """)
+            patched++
         }
 
         getIdentityForSignInNameFingerprint.method.apply {
@@ -60,6 +65,7 @@ val powerPointDisableLoginRequirementPatch = bytecodePatch(
             ensureRegisterCount(1)
             implementation?.let { removeInstructions(0, it.instructions.count()) }
             addInstructions(0, "const/4 v0, 0x0\nreturn-object v0")
+            patched++
         }
 
         checkAndStartSSOIfRequiredFingerprint.method.apply {
@@ -67,6 +73,9 @@ val powerPointDisableLoginRequirementPatch = bytecodePatch(
             ensureRegisterCount(1)
             implementation?.let { removeInstructions(0, it.instructions.count()) }
             addInstructions(0, "const/4 v0, 0x0\nreturn v0")
+            patched++
         }
+
+        println("[Disable Login Requirement] Applied $patched hooks -> login requirement and FTUX paywalls removed.")
     }
 }
