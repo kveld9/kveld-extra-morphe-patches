@@ -125,12 +125,18 @@ class AdversarialValidator:
             and f.name != "SharedExtensionPatch.kt"
         ]
         missing_logs = []
+        verified_count = 0
         for kt in kt_files:
             content = kt.read_text(encoding="utf-8")
+            # Declaration-only files (e.g. Fingerprints.kt) cannot emit patch-time telemetry
+            # by construction; enforcement on patch definitions is unchanged.
+            if not any(m in content for m in ("bytecodePatch(", "resourcePatch(", "rawResourcePatch(")):
+                continue
+            verified_count += 1
             if "println(" not in content:
                 missing_logs.append(str(kt.relative_to(self.repo_root)))
 
         if missing_logs:
             return False, "The following patch files are missing diagnostic logging:\n" + "\n".join(missing_logs)
 
-        return True, f"All {len(kt_files)} patch definitions have verified diagnostic logging."
+        return True, f"All {verified_count} patch definitions have verified diagnostic logging."
