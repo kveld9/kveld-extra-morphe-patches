@@ -164,9 +164,9 @@ Active targets are defined in `Constants.kt` as `COMPATIBILITY_<APP>`; add new o
 
 ---
 
-## 6. Diagnostic Telemetry Invariants
+## 6. Diagnostic Telemetry Invariants & Harness Compliance
 
-Every patch execution must emit concise, high-signal diagnostic telemetry captured by Morphe Manager / CLI logs (`[WARN] [STDIO]: [...]`). Patches must satisfy the following invariants:
+Every patch execution must emit concise, high-signal diagnostic telemetry captured by Morphe Manager / CLI logs (`[WARN] [STDIO]: [...]`). Patches must satisfy the following invariants tested by RE and audit harnesses:
 
 1. **Standardized Prefix**: Every log line must start with the bracketed patch name prefix: `println("[Patch Name] ...")`.
 2. **Dynamic Mutation Counter**: Track injected modifications with a local counter:

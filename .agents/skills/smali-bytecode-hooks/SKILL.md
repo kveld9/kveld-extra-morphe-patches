@@ -143,7 +143,7 @@ return-void
 ### Obfuscation Warning & Guidelines
 - Obfuscated identifiers (such as `P4`, `y`, `O0`) are volatile and change between releases.
 - Always prefer anchoring on **stable framework APIs** (e.g. `androidx.preference.Preference`) or string literals.
-- When obfuscated symbols are strictly necessary, isolate them in centralized contracts and verify them against newly updated APKs (`runPatchTest`) before building.
+- When obfuscated symbols are strictly necessary, isolate them in centralized contracts or verify them via RE audit scripts (`harness/update.py --audit`) against newly updated APKs before building.
 
 ---
 
