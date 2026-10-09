@@ -130,10 +130,12 @@ internal val subscriptionDataIsTrialFingerprint = Fingerprint(
 )
 
 internal val licenseStatusIsPremiumFingerprint = Fingerprint(
-    definingClass = "Lcom/microsoft/office/growth/upsellplugin/models/LicenseStatus;",
     name = "isPremium",
     returnType = "Z",
     parameters = emptyList(),
+    custom = { _, classDef ->
+        classDef.type.startsWith("Lcom/microsoft/office/growth/upsellplugin/models/")
+    },
 )
 
 internal val licenseSessionStateFingerprint = Fingerprint(
