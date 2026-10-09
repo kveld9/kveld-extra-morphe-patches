@@ -24,6 +24,8 @@ Technical documentation and patch catalog for Moovit on Android.
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Moovit Telemetry Manifest Purge` | Neutralizes AppsFlyer, Braze, and Inneractive DEX dispatchers, disables analytics services/providers, and strips advertising permissions and AppKey. |
 | **Fix Google Maps** | `bytecodePatch` | `true` (Enabled) | None | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |
 | **Unlock Moovit+** | `bytecodePatch` | `true` (Enabled) | None | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |
+| **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Hides banner and inline ads and neutralizes ad unit ID lookups. |
+| **Suppress Paywalls** | `bytecodePatch` | `true` (Enabled) | None | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |
 | **Moovit Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips advertising and tracking permissions, disables analytics services, providers, and receivers, and injects opt-out metadata in AndroidManifest.xml. |
 | **Locale Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. |
 | **Screen Density Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. |
@@ -157,6 +159,14 @@ Eliminates banner and inline advertisements across all views:
 - **Ad Unit Resolver Suppression**: Hooks `getAdUnitId(AdSource)` in `Lg3b;` (containing remote-config marker `"is_interstitial_ads_free_version"`) to return empty strings (`""`), neutralizing both primary and fallback remote ad inventory requests.
 - **MoovitAdView & MoovitBannerAdView View Suppression**: Hooks `setAdSource` on both banner classes (`com.moovit.app.ads.MoovitAdView` and `com.moovit.app.ads.MoovitBannerAdView`) to invoke `setVisibility(View.GONE)` before any view inflation or ad request initiation.
 - **Ad-Free Menu Item Suppression**: Injects `setVisibility(View.GONE)` in `AdFreeMenuItemFragment.onCreateView()` right before returning the inflated view hierarchy.
+
+### F. Paywall & Upgrade Dialog Suppression (`bytecodePatch`)
+
+Suppresses modal paywalls, onboarding upgrade interstitials, and promotional upsell cards:
+- **Remote Paywall Gate**: Rewrites `Lmj1.a(MoovitComponentActivity)Z` (remote config `"block_paywall"`) to return `false` unconditionally.
+- **BlockPaywallActivity & Onboarding Interstitials**: Intercepts `onReady` in `BlockPaywallActivity` to invoke `relaunchCallingActivity()`, and in `MoovitPlusOnboardingActivity` to invoke finish+relaunch helper `Q0()`.
+- **Promo Dialogs & Menu Items**: Suppresses `MoovitPlusActivity`, menu promo fragments, `MoovitSubscriptionsPromoCellFragment`, and dismisses `MoovitPlusPackagePopupFragment`.
+- **Go Premium Card Suppression**: Neutralizes the "Go Premium" card visibility emitter in `Lynb;->emit()` by replacing the `VISIBLE` branch move operand (`move v8, v4`) with the `GONE` operand (`move v8, v2`).
 
 ---
 

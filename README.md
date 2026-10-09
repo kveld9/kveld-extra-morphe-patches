@@ -45,7 +45,7 @@
 </details>
 
 <details open>
-<summary>Moovit&nbsp;&nbsp;•&nbsp;&nbsp;<b>6 patches</b></summary>
+<summary>Moovit&nbsp;&nbsp;•&nbsp;&nbsp;<b>7 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -59,6 +59,7 @@
 | **Fix Google Maps** | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |  |
 | **Unlock Moovit+** | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |  |
 | **Remove Ads** | Hides banner and inline ads and neutralizes ad unit ID lookups. |  |
+| **Suppress Paywalls** | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |  |
 | **Locale Slimmer** | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. | • Locales to keep |
 | **Screen Density Slimmer** | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. | • Target screen density |
 
