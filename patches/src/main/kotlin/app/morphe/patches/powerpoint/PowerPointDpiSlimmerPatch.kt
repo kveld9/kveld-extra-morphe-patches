@@ -200,6 +200,7 @@ private fun isRemovableDensityDir(dirName: String, targetDpi: String): Boolean {
     if (dirName.contains("-nodpi") || dirName.contains("-anydpi")) return false
     if (dirName.contains("-$targetDpi")) return false
     val qualifiers = dirName.split("-").drop(1)
+    if ("ldrtl" in qualifiers || "ldltr" in qualifiers) return false
     return qualifiers.any { it in KNOWN_DPI_QUALIFIERS }
 }
 
