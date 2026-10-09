@@ -20,7 +20,7 @@
 
 | App | Package | Target Version |
 | :--- | :--- | :--- |
-| _None yet_ | | |
+| Instagram | `com.instagram.android` | 447.0.0.55.81 |
 
 ## Patches
 

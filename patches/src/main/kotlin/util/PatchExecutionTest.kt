@@ -34,6 +34,17 @@ enum class TargetApp(
     //     filePattern = Regex("(?i).*example.*\\.(?:apk|apkm|xapk)$"),
     //     patchDirectoryPart = "example",
     // ),
+    INSTAGRAM(
+        id = "instagram",
+        appName = "Instagram",
+        packageName = Constants.INSTAGRAM_PACKAGE_NAME,
+        candidateFilenames = listOf(
+            "com.instagram.android_447.0.0.55.81-385311895_1dpi_af3be75e29a3de479232e9e7978c0003_apkmirror.com.apkm",
+            "instagram_${Constants.INSTAGRAM_TARGET_VERSION}.apkm"
+        ),
+        filePattern = Regex("(?i).*instagram.*\\.(?:apk|apkm|xapk)$"),
+        patchDirectoryPart = "instagram",
+    ),
     ;
 
     companion object {

@@ -1,5 +1,9 @@
 package app.morphe.patches.shared
 
+import app.morphe.patcher.patch.ApkFileType
+import app.morphe.patcher.patch.AppTarget
+import app.morphe.patcher.patch.Compatibility
+
 /**
  * Single source of truth for target apps: package names, the one supported
  * version per app, and the [app.morphe.patcher.patch.Compatibility] contracts
@@ -25,4 +29,20 @@ package app.morphe.patches.shared
  * )
  * ```
  */
-object Constants
+object Constants {
+    const val INSTAGRAM_PACKAGE_NAME = "com.instagram.android"
+    const val INSTAGRAM_TARGET_VERSION = "447.0.0.55.81"
+
+    val COMPATIBILITY_INSTAGRAM = Compatibility(
+        name = "Instagram",
+        packageName = INSTAGRAM_PACKAGE_NAME,
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0xE1306C,
+        targets = listOf(
+            AppTarget(
+                version = INSTAGRAM_TARGET_VERSION,
+                description = "Download com.instagram.android v\$INSTAGRAM_TARGET_VERSION (APKM) from APKMirror",
+            )
+        )
+    )
+}
