@@ -18,12 +18,12 @@
 
 ## Supported Apps
 
-| App | Package | Target Version |
-| :--- | :--- | :--- |
-| Instagram | `com.instagram.android` | 447.0.0.55.81 |
-| X | `com.twitter.android` | 12.19.1-release.0 |
-| Moovit | `com.tranzmate` | 5.201.1.1809 |
-| PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 |
+| App | Package | Target Version | Variant | Download Source | Guide |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Instagram | `com.instagram.android` | 447.0.0.55.81 | APKM bundle | APKMirror | - |
+| X | `com.twitter.android` | 12.19.1-release.0 | APKM bundle (`arm64-v8a`) | APKMirror | [X Guide](docs/apps/twitter.md) |
+| Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | APKMirror | [Moovit Guide](docs/apps/moovit.md) |
+| PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | APKMirror | - |
 
 ## Patches
 
