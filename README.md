@@ -37,6 +37,7 @@
 | X | `com.twitter.android` | 12.19.1-release.0 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-19-1-release-0-release/) | [X Guide](docs/apps/twitter.md) |
 | Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/moovit-your-transit-tracker-5-201-1-1809-release/) | [Moovit Guide](docs/apps/moovit.md) |
 | PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-16-0-20527-20034-release/) | [PowerPoint Guide](docs/apps/powerpoint.md) |
+| Lightroom | `com.adobe.lrmobile` | 11.6.01 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/adobe/lightroom/lightroom-photo-video-editor-11-6-01-release/) | [Lightroom Guide](docs/apps/lrmobile.md) |
 | CapCut | `com.lemon.lvoverseas` | 19.7.0 | APK (`arm64-v8a`, `armeabi-v7a`, `nodpi`) | APKMirror | [CapCut Guide](docs/apps/capcut.md) |
 
 ## Patches
