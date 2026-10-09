@@ -647,7 +647,12 @@ fun main(args: Array<String>) {
             val outPath = System.getProperty("outputApk")
             val dexDigestOption = resolveDexDigestOption()
             if (outPath != null) {
-                val outFile = resolveOutputPath(outPath)
+                var outFile = resolveOutputPath(outPath)
+                if (!outFile.name.endsWith(".apk", ignoreCase = true)) {
+                    val normalized = File("${outFile.path}.apk")
+                    println("[PACK] Output path missing .apk extension; normalized to: ${normalized.name}")
+                    outFile = normalized
+                }
                 outFile.parentFile?.mkdirs()
                 val unsignedApk = File(tempDir, "unsigned-work.apk")
                 actualApkFile.copyTo(unsignedApk, overwrite = true)
