@@ -14,6 +14,7 @@ description: End-to-end workflow for onboarding a new target app and authoring t
   2. Declarative SDK opt-out flags: injecting disable flags directly into application `<meta-data>`.
   3. Dalvik bytecode dispatchers: stubbing telemetry loggers, dispatchers, and SDK initialization methods with zero runtime overhead.
   4. Native binary endpoints (where applicable): in-situ redirection of hardcoded native telemetry hosts in `.so` libraries to `0.0.0.0`.
+- Neutralization of client-side post-patch compatibility blockers and functioning bypasses: local signature and integrity checks, involuntary store update redirects, sharedUserId conflicts, forced login requirements blocking local utility, and client-side feature/paywall gates.
 
 ### B. Explicit Non-Goals & Architectural Boundaries
 - **Preserve Core Networking**: Never remove `android.permission.INTERNET` or sever primary application network channels.
@@ -25,6 +26,15 @@ description: End-to-end workflow for onboarding a new target app and authoring t
   - *Standard for All Other Targets*: All configurable parameters must be compile-time / patch-time options via Morphe Manager / CLI (`stringOption`, `booleanOption`).
 - **Strict Prohibition of Server-Side Bypasses & DRM**:
   - Never attempt to bypass server-side subscription paywalls, unlock cloud-restricted content, access private accounts, or defeat DRM protections (authoritative boundary: `docs/out-of-scope.md`). Patches operate strictly on client-side bytecode and local assets.
+- **Controlled Scope & Client-Side Verification Test**:
+  - Any client-side compatibility or entitlement patch must pass the three-question verification test before implementation:
+    1. Is the final decision executed locally by the APK's own bytecode or assets?
+    2. Does the complete user flow execute entirely on-device?
+    3. Does the patch operate without forging network credentials, session tokens, purchase receipts, or remote attestations?
+  - **Three-Yes Invariant**: All three questions MUST answer YES. If any question is NO, the patch is strictly out of scope and must not be written.
+  - **Truthful Documentation Invariant**: If backend servers continue to reject, restrict, or deny the feature or cloud data, NEVER document or describe the patch as an "unlock" or "subscription bypass". Document it strictly as a client-side UI suppression or local feature gate bypass.
+  - **Social & Messaging Guest-Mode Prohibition**: Guest-mode or login-bypass patches are strictly prohibited on social networks and messaging platforms (e.g. Discord, Twitter/X) where client-side sessions are intrinsically tied to server state. When implementing guest mode in permitted local utilities, implement mandatory null-identity guards to prevent crashes.
+  - **Default Setting Policy**: Set `default = true` ONLY when the complete user flow is verified on a physical device. Any doubt or lack of hardware validation requires `default = false` (opt-in).
 - **Strict Prohibition of Feature Bloat & Download Managers**:
   - Never embed third-party media download engines, torrent clients, or custom UI skins inside host applications.
 - **Single Target Version Invariant**:
@@ -166,6 +176,23 @@ When signatures shift or cannot be identified via simple grep:
 
 Always store intermediate recon dumps in `scratch/` (ensuring `mkdir -p scratch` first) or `<appDataDir>/brain/<conversation-id>/scratch/`. Never commit raw scan outputs.
 
+### I. Compatibility Blocker Reconnaissance
+After analyzing telemetry, investigate client-side post-patch compatibility blockers and functioning gates that prevent the modified application from installing, launching, or operating properly:
+
+1. **Manifest-Level Blocker Scan (`aapt2 dump xmltree`)**:
+   - Dump the manifest as shown in Section 3.C and inspect for:
+     - Shared User ID conflicts: `android:sharedUserId` (triggers `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE` on modern Android distributions).
+     - Store redirect and update activities: activities launching store intents or orphan update services (e.g. `AppUpdateActivity`, `MarketRedirectActivity`).
+     - Orphan billing activities: vendor store billing components that fail without host OEM stores. *Rule*: Never disable `com.android.billingclient.api.ProxyBillingActivity` or `ProxyBillingActivityV2`.
+     - Intent filter handlers: confirm `android.intent.action.VIEW` filters for web schemes and OAuth redirects remain intact.
+
+2. **Bytecode-Level Gate & Integrity Scan (DEX Scan & jadx)**:
+   - Scan DEX bytecodes (using the method scanner in Section 3.G or jadx) for:
+     - **Signature & Anti-Tamper Verification**: APK signature hash checks, package manager signature comparisons, emulator/root/Xposed detection classes, and code transparency callback interfaces (`CodeTransparencyCheckCallback`).
+     - **Involuntary Store & Market Redirects**: String constants `market://details?id=`, `play.google.com/store/apps/details`, or store intent builders executed on launch or repackage detection.
+     - **Mandatory Login & FTUX Gates**: First-Time User Experience (FTUX) wizards or compulsory login listeners that block offline or standalone utility functions.
+     - **Client-Side Paywalls & Local Feature Gates**: Boolean getters (`isPro`, `isPaying`, `isSubscribed`, `hasFamilyPlan`), licensing state enums (`LicensingState`), or local paywall activities (`BlockPaywallActivity`).
+
 ---
 
 ## 4. Registration & Documentation Deliverables
@@ -234,14 +261,12 @@ Add the target to `enum class TargetApp`:
 ### C. Supported Apps Table (`README.md`)
 File: `README.md`
 
-Follow the target repository's existing table convention:
-- In `kveld-extra-morphe-patches`: 3 columns (`App | Package | Target Version`).
-- In repositories like `brave-origin`: 6 columns (`Application | Package ID | Target Version | Architecture/Variant | Download Source | Complete Guide`).
-Do not force a foreign column schema.
+Follow the repository's existing Supported Apps table schema (6 columns):
+`| App | Package | Target Version | Variant | Download Source | Guide |`
 
 Example for this repository:
 ```markdown
-| <App Name> | `<package_name>` | <target_version> |
+| <App Name> | `<package_name>` | <target_version> | APKM bundle (`arm64-v8a`) | [APKMirror](url) | [<App Name> Guide](docs/apps/<app_id>.md) |
 ```
 
 ### D. Application Guide Deliverable (`docs/apps/<app_id>.md`)
@@ -281,6 +306,7 @@ Comprehensive technical, architecture, and patch guide for **<App Name>** (`<pac
 
 > [!WARNING]
 > Document critical user-facing trade-offs, potential upstream breaking points, preserved services (e.g. push tokens, billing), or components that must NOT be removed (e.g. MLKit breakage for QR/barcodes).
+> - **Client-Side vs Server-Side Entitlements**: Client-side gates, local license checks, or login requirement screens are neutralized locally on-device. No server-side subscriptions or cloud entitlements are granted or claimed; cloud-synced features and server-backed assets remain subject to backend authorization.
 
 ---
 
@@ -329,6 +355,18 @@ Telemetry blocking and asset debloating implementations are partitioned into ded
   - Background wakeup and periodic sync elimination via `BackgroundSyncPurgePatch` patterns.
   - Guidelines for structuring one independent opt-in patch per debloat axis (`default = false`).
   - Reference: `.agents/skills/app-debloat/SKILL.md`.
+
+### C. Compatibility and Functioning Bypass (`compat-bypass`)
+- **When to Invoke**: Invoke when the patched application fails to install, launch, or function properly due to client-side integrity/signature checks, mandatory login requirements blocking local utility, involuntary store redirects, sharedUserId conflicts, or client-side feature/paywall gates.
+- **What It Delivers**:
+  - Local signature and integrity check neutralization patterns (anti-tamper bypass, code transparency callback stubs, signature spoofing to Google Play Services).
+  - Involuntary store-redirect killer patterns without affecting standard `VIEW` deep links or OAuth browser flows.
+  - Client-side paywall and local feature gate neutralization patterns (boolean flags, licensing state enums, FTUX dismissals).
+  - Conditional guest-mode and login bypass patterns for standalone utilities, with strict exclusion of social and messaging applications (e.g. Discord, Twitter/X) and mandatory null-identity crash guards.
+  - Manifest compatibility fixes (stripping `android:sharedUserId`).
+  - Strict preservation invariants: never disable `ProxyBillingActivity`, push notifications, or `android.permission.INTERNET`.
+  - Default policy guidance: `default = true` strictly requires physical device verification of the full user flow; any doubt or unverified state defaults to `false` (opt-in).
+  - Reference: `.agents/skills/compat-bypass/SKILL.md`.
 
 ---
 
@@ -438,9 +476,14 @@ adb -s <serial> uninstall <package_name>
 ```
 
 ### B. Physical Device Comparative Validation
-For non-trivial telemetry and background sync modifications, perform a comparative run (Vanilla vs Patched) on the physical lab device:
-1. Run vanilla APK, measure background jobs and telemetry dispatch.
-2. Run patched APK, confirm telemetry endpoints remain silent and app functions with zero crashes.
+For non-trivial telemetry, background sync, and compatibility bypass modifications, perform a comparative run (Vanilla vs Patched) on the physical lab device:
+1. Run vanilla APK: exercise user flows, measure background jobs and telemetry dispatch, and record default gate/login/license behavior.
+2. Run patched APK: confirm telemetry endpoints remain silent, bypassed gates function as intended, and the application functions with zero crashes.
+3. **State Persistence & Cold Restart Verification**: For compatibility and bypass modifications, verify that bypassed gates, local entitlements, or guest session states persist across:
+   - Cold app restarts (`am force-stop` followed by launcher restart).
+   - Task eviction (swiping away from recents).
+   - Cache clearance and device reboot.
+   Assert that the app does not regress to a locked state, show unhandled `NullPointerException`, or attempt invalid background synchronizations upon reopening.
 
 ### C. Runtime Traffic Audit (Optional Tooling)
 Runtime packet capture audits require `tcpdump` on the device and optional analysis tools (`tshark`). Note that `tcpdump` and `tshark` are optional tools that may not be available in standard PATH environments.
@@ -519,7 +562,7 @@ Every completed unit of work must be committed immediately as an isolated, indep
 
 ### D. Mandatory Post-Close Adversarial Audit (audit-stack)
 After all commits in A are landed, automatically run the `audit-stack` skill against the onboarding changeset before closing the task (auditing the pending range, e.g. `origin/<base>..HEAD`). Never run per-commit auto-audits.
-1. **Scope**: Strictly the onboarding scope — `patches/.../<app_id>/`, `docs/apps/<app_id>.md`, and the app's hunks in `Constants.kt` / `PatchExecutionTest.kt` / `README.md`. Explicitly exclude `FOREIGN_IN_PROGRESS_WORK` (uncommitted files and directories outside the app scope); never stage, modify, or report foreign work as part of this audit.
-2. **Remediation precedence**: `audit-stack`'s autonomous fix loop runs through the AGY delegation in force — fixes are applied by the same AGY worker conversations (steered with concrete findings), gates are executed by the orchestrator. Never fix project files directly from the orchestrator; never use another harness's subagents for implementation.
+1. **Scope**: Strictly the onboarding scope -- `patches/.../<app_id>/`, `docs/apps/<app_id>.md`, and the app's hunks in `Constants.kt` / `PatchExecutionTest.kt` / `README.md`. Explicitly exclude `FOREIGN_IN_PROGRESS_WORK` (uncommitted files and directories outside the app scope); never stage, modify, or report foreign work as part of this audit.
+2. **Remediation precedence**: `audit-stack`'s autonomous fix loop runs through the AGY delegation in force -- fixes are applied by the same AGY worker conversations (steered with concrete findings), gates are executed by the orchestrator. Never fix project files directly from the orchestrator; never use another harness's subagents for implementation.
 3. **Fix commits**: Each confirmed fix lands as its own `fix(<app_id>): ...` commit after re-running the Section 6 gates. Loop until the audit reports zero blocking findings.
 4. No push / no PR (per C).
