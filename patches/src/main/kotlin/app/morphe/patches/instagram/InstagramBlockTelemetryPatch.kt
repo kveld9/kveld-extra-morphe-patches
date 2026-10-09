@@ -1,5 +1,7 @@
 package app.morphe.patches.instagram
 
+import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
@@ -99,7 +101,38 @@ val instagramBlockTelemetryPatch = bytecodePatch(
     dependsOn(instagramTelemetryResourcePatch)
 
     execute {
-        println("[Instagram Telemetry] Omitted DEX hooks because exact unobfuscated signatures (FirebaseAnalytics, DataTransport, etc.) cannot be verified statically without a DEX scan. Relying entirely on Manifest component disabling.")
-        // Zero DEX hooks are injected to avoid fingerprint mismatches as required by the zero-fingerprint-mismatch invariant.
+        val hookedMethods = mutableListOf<String>()
+
+        Fingerprint(
+            definingClass = "Lcom/instagram/analytics/analytics2/IgAnalytics2TaskBasedUploader;",
+            name = "HZG",
+            parameters = listOf("LX/KpT;", "LX/ArQ;", "LX/Av0;"),
+            returnType = "V",
+        ).method.apply {
+            addInstructions(0, "return-void")
+            hookedMethods.add("IgAnalytics2TaskBasedUploader.HZG")
+        }
+
+        Fingerprint(
+            definingClass = "Lcom/instagram/analytics/analytics2/IGAnalytics2SimpleUploader;",
+            name = "HZG",
+            parameters = listOf("LX/KpT;", "LX/ArQ;", "LX/Av0;"),
+            returnType = "V",
+        ).method.apply {
+            addInstructions(0, "return-void")
+            hookedMethods.add("IGAnalytics2SimpleUploader.HZG")
+        }
+
+        Fingerprint(
+            definingClass = "Lcom/facebook/analytics2/logger/legacy/uploader/PrivacyControlledUploader;",
+            name = "HZG",
+            parameters = listOf("LX/KpT;", "LX/ArQ;", "LX/Av0;"),
+            returnType = "V",
+        ).method.apply {
+            addInstructions(0, "return-void")
+            hookedMethods.add("PrivacyControlledUploader.HZG")
+        }
+
+        println("[Instagram Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
     }
 }
