@@ -36,7 +36,7 @@
 | Instagram | `com.instagram.android` | 447.0.0.55.81 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-447-0-0-55-81-release/) | [Instagram Guide](docs/apps/instagram.md) |
 | X | `com.twitter.android` | 12.19.1-release.0 | APKM bundle (`arm64-v8a`) | APKMirror | [X Guide](docs/apps/twitter.md) |
 | Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | APKMirror | [Moovit Guide](docs/apps/moovit.md) |
-| PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | APKMirror | - |
+| PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-16-0-20527-20034-release/) | [PowerPoint Guide](docs/apps/powerpoint.md) |
 
 ## Patches
 
