@@ -2,11 +2,14 @@ package app.morphe.patches.powerpoint
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.removeInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.clearTryBlocks
 import app.morphe.patches.shared.disableComponentsByName
+import app.morphe.patches.shared.ensureRegisterCount
 import app.morphe.patches.shared.removeComponentDiscoveryRegistrarsWhere
 import app.morphe.patches.shared.setApplicationMetaData
 import app.morphe.patches.shared.stripPermissionsWhere
@@ -189,10 +192,27 @@ private fun hookTelemetryDispatchers(hookedMethods: MutableList<String>) {
     )
 }
 
+context(_: BytecodePatchContext)
+private fun hookAdMeasurementPlatformData(hookedMethods: MutableList<String>) {
+    listOf(getAIFAFingerprint, getAppSetIdFingerprint).forEach { fp ->
+        fp.method.apply {
+            clearTryBlocks()
+            ensureRegisterCount(1)
+            implementation?.let { removeInstructions(0, it.instructions.count()) }
+            addInstructions(0, """
+                const-string v0, ""
+                return-object v0
+            """)
+        }
+    }
+    hookedMethods.add("AdMeasurementPlatformData.getAIFA")
+    hookedMethods.add("AdMeasurementPlatformData.getAppSetId")
+}
+
 @Suppress("unused")
 val powerPointBlockTelemetryPatch = bytecodePatch(
     name = "Block Telemetry & Trackers",
-    description = "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods plus MUTSDK receivers, disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
+    description = "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_POWERPOINT)
@@ -203,6 +223,7 @@ val powerPointBlockTelemetryPatch = bytecodePatch(
 
         hookLifecycleCallbacks(hookedMethods)
         hookTelemetryDispatchers(hookedMethods)
+        hookAdMeasurementPlatformData(hookedMethods)
 
         println("[PowerPoint Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
     }
