@@ -150,11 +150,28 @@ private fun hookTelemetryDispatchers(hookedMethods: MutableList<String>) {
         label = "SendAggregationTimerTask.run",
     )
     hookVoidMethod(
-        definingClass = "Lcom/microsoft/applications/telemetry/InstrumentedExceptionHandler;",
-        name = "uncaughtException",
-        parameters = listOf("Ljava/lang/Thread;", "Ljava/lang/Throwable;"),
+        definingClass = "Lcom/microsoft/applications/telemetry/core/e0;",
+        name = "logFailure",
+        parameters = listOf(
+            "Ljava/lang/String;",
+            "Ljava/lang/String;",
+            "Ljava/lang/String;",
+            "Ljava/lang/String;",
+            "Lcom/microsoft/applications/telemetry/EventProperties;",
+        ),
         hookedMethods = hookedMethods,
-        label = "InstrumentedExceptionHandler.uncaughtException",
+        label = "e0.logFailure5",
+    )
+    hookVoidMethod(
+        definingClass = "Lcom/microsoft/applications/telemetry/core/e0;",
+        name = "logFailure",
+        parameters = listOf(
+            "Ljava/lang/String;",
+            "Ljava/lang/String;",
+            "Lcom/microsoft/applications/telemetry/EventProperties;",
+        ),
+        hookedMethods = hookedMethods,
+        label = "e0.logFailure3",
     )
     hookVoidMethod(
         definingClass = "Lcom/microsoft/applications/telemetry/pal/hardware/HardwareInformationReceiver;",
