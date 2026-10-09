@@ -93,4 +93,29 @@ object Constants {
             )
         )
     )
+
+
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x001C34,
+        targets = listOf(
+            AppTarget(
+            )
+        )
+    )
+
+    const val CAPCUT_PACKAGE_NAME = "com.lemon.lvoverseas"
+    const val CAPCUT_TARGET_VERSION = "19.7.0"
+
+    val COMPATIBILITY_CAPCUT = Compatibility(
+        name = "CapCut",
+        packageName = CAPCUT_PACKAGE_NAME,
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x000000,
+        targets = listOf(
+            AppTarget(
+                version = CAPCUT_TARGET_VERSION,
+                description = "Download com.lemon.lvoverseas v\$CAPCUT_TARGET_VERSION (APK) from APKMirror",
+            )
+        )
+    )
 }

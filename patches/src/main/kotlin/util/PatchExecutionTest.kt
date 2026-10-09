@@ -78,6 +78,20 @@ enum class TargetApp(
         filePattern = Regex("(?i).*powerpoint.*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "powerpoint",
     ),
+        candidateFilenames = listOf(
+        ),
+    ),
+    CAPCUT(
+        id = "capcut",
+        appName = "CapCut",
+        packageName = Constants.CAPCUT_PACKAGE_NAME,
+        candidateFilenames = listOf(
+            "com.lemon.lvoverseas_19.7.0-19701600_minAPI23(arm64-v8a,armeabi-v7a)(nodpi)_apkmirror.com.apk",
+            "capcut_${Constants.CAPCUT_TARGET_VERSION}.apk"
+        ),
+        filePattern = Regex("(?i).*(?:capcut|lemon\\.lvoverseas).*\\.(?:apk|apkm|xapk)$"),
+        patchDirectoryPart = "capcut",
+    ),
     ;
 
     companion object {
