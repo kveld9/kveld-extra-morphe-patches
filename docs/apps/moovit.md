@@ -22,10 +22,11 @@ Technical documentation and patch catalog for Moovit on Android.
 | Patch Name | Typology | Default State | Dependencies | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Moovit Telemetry Manifest Purge` | Neutralizes AppsFlyer, Braze, and Inneractive DEX dispatchers, disables analytics services/providers, and strips advertising permissions and AppKey. |
-| **Fix Google Maps** | `bytecodePatch` | `true` (Enabled) | None | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |
+| **Fix Google Maps** | `bytecodePatch` | `true` (Enabled) | `Moovit Custom Maps API Key` | Restores Google Maps rendering by spoofing the original package signature to Google Play Services, with optional custom API key override. |
 | **Unlock Moovit+** | `bytecodePatch` | `true` (Enabled) | None | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |
 | **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Hides banner and inline ads and neutralizes ad unit ID lookups. |
 | **Suppress Paywalls** | `bytecodePatch` | `true` (Enabled) | None | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |
+| **Moovit Custom Maps API Key** | `resourcePatch` | `false` (Opt-in) | None | Replaces the Google Maps API key in AndroidManifest.xml and web-service strings when a custom key is provided. |
 | **Moovit Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips advertising and tracking permissions, disables analytics services, providers, and receivers, and injects opt-out metadata in AndroidManifest.xml. |
 | **Locale Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. |
 | **Screen Density Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. |
@@ -144,6 +145,7 @@ When Moovit is re-packaged or signed with custom keys, Google Play Services reje
   - Dynamically proxies `ActivityThread.sPackageManager` and `ServiceManager.sCache["package"]`.
   - Intercepts `getPackageInfo` and `getPackageInfoAsUser` calls for `com.tranzmate` to return the official Tranzmate signing certificate to Google Play Services.
   - Guarantees full map tile loading, geocoding, and routing overlays without modifying host API keys.
+- **Optional Custom Maps API Key (`mapsApiKey`)**: Users running in MicroG or Google-free environments can supply their own Google Maps Platform API key. When supplied, the chained `resourcePatch` replaces `com.google.android.geo.API_KEY` in `AndroidManifest.xml` and `google_wla_api_key` in `res/values/strings.xml`. When omitted (default), signature spoofing handles the built-in keys automatically without requiring user credentials.
 
 ### D. Moovit+ Premium Unlocking (`bytecodePatch`)
 
@@ -164,7 +166,7 @@ Eliminates banner and inline advertisements across all views:
 
 Suppresses modal paywalls, onboarding upgrade interstitials, and promotional upsell cards:
 - **Remote Paywall Gate**: Rewrites `Lmj1.a(MoovitComponentActivity)Z` (remote config `"block_paywall"`) to return `false` unconditionally.
-- **BlockPaywallActivity & Onboarding Interstitials**: Intercepts `onReady` in `BlockPaywallActivity` to invoke `relaunchCallingActivity()`, and in `MoovitPlusOnboardingActivity` to invoke finish+relaunch helper `Q0()`.
+- **BlockPaywallActivity & Onboarding Interstitials**: Intercepts `onReady` in `BlockPaywallActivity` to invoke the dynamically resolved skip helper (the private method calling `getActivityToStartOnFinish()`), and in `MoovitPlusOnboardingActivity` to invoke the dynamically resolved skip helper (the method referencing `"activity_to_start_on_finish"`), ensuring resilience across future R8 obfuscation changes.
 - **Promo Dialogs & Menu Items**: Suppresses `MoovitPlusActivity`, menu promo fragments, `MoovitSubscriptionsPromoCellFragment`, and dismisses `MoovitPlusPackagePopupFragment`.
 - **Go Premium Card Suppression**: Neutralizes the "Go Premium" card visibility emitter in `Lynb;->emit()` by replacing the `VISIBLE` branch move operand (`move v8, v4`) with the `GONE` operand (`move v8, v2`).
 

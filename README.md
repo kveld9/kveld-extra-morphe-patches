@@ -56,7 +56,7 @@
 | Patch | Description | Options |
 |----------|----------------|-----------|
 | **Block Telemetry & Trackers** | Disables analytics and tracking services, providers, and receivers, and strips advertising permissions. |  |
-| **Fix Google Maps** | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |  |
+| **Fix Google Maps** | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. | • Google Maps Platform API key |
 | **Unlock Moovit+** | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |  |
 | **Remove Ads** | Hides banner and inline ads and neutralizes ad unit ID lookups. |  |
 | **Suppress Paywalls** | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |  |
