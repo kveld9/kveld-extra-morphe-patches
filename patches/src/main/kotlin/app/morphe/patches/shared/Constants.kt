@@ -61,4 +61,19 @@ object Constants {
         )
     )
 
+    const val POWERPOINT_PACKAGE_NAME = "com.microsoft.office.powerpoint"
+    const val POWERPOINT_TARGET_VERSION = "16.0.20527.20034"
+
+    val COMPATIBILITY_POWERPOINT = Compatibility(
+        name = "PowerPoint",
+        packageName = POWERPOINT_PACKAGE_NAME,
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0xE44C50,
+        targets = listOf(
+            AppTarget(
+                version = POWERPOINT_TARGET_VERSION,
+                description = "Download com.microsoft.office.powerpoint v\$POWERPOINT_TARGET_VERSION (APKM) from APKMirror",
+            )
+        )
+    )
 }
