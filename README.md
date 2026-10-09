@@ -25,6 +25,21 @@
 ## Patches
 
 <!-- PATCHES_START -->
+<details open>
+<summary>Instagram&nbsp;&nbsp;•&nbsp;&nbsp;<b>1 patch</b></summary>
+<br>
+
+**Supported versions:**
+
+| 447.0.0.55.81 |
+| :---: |
+
+| Patch | Description | Options |
+|----------|----------------|-----------|
+| **Block Telemetry & Trackers** | Neutralizes Facebook Analytics2, DataTransport, FDID/PhoneId providers, and strips AD_ID permissions. |  |
+
+</details>
+
 <!-- PATCHES_END -->
 
 ## Documentation
