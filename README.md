@@ -26,7 +26,7 @@
 
 <!-- PATCHES_START -->
 <details open>
-<summary>Instagram&nbsp;&nbsp;•&nbsp;&nbsp;<b>1 patch</b></summary>
+<summary>Instagram&nbsp;&nbsp;•&nbsp;&nbsp;<b>2 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -37,6 +37,7 @@
 | Patch | Description | Options |
 |----------|----------------|-----------|
 | **Block Telemetry & Trackers** | Neutralizes Facebook Analytics2, DataTransport, FDID/PhoneId providers, and strips AD_ID permissions. |  |
+| **MLKit Vision Slimmer** | Disable MLKit component discovery and registrars. WARNING: this breaks in-app QR and barcode scanning. |  |
 
 </details>
 

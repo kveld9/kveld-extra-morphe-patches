@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.0.0...v1.1.0) (2026-10-09)
+
+### New Features
+
+* **instagram:** add opt-in MLKit vision slimmer ([38d891f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/38d891f437a4fcdc9c101a4f54f4bf16a09349d4))
+
 ## 1.0.0 (2026-10-09)
 
 ### Bug Fixes
