@@ -28,8 +28,9 @@ description: End-to-end workflow for onboarding a new target app and authoring t
 - **Strict Prohibition of Feature Bloat & Download Managers**:
   - Never embed third-party media download engines, torrent clients, or custom UI skins inside host applications.
 - **Single Target Version Invariant**:
-  - Every target application must target strictly ONE active version (`targets = listOf(AppTarget(...))`).
-  - Never retain legacy fallback code or multi-version compatibility matrices. When upstream updates, bump the target version and retire the old version immediately.
+  - Every target application must target strictly ONE active upstream version.
+  - When upstream ships distinct 32-bit and 64-bit builds (e.g. `armeabi-v7a` and `arm64-v8a`), configure ONE `AppTarget` entry per ABI variant under that exact same upstream version in `targets = listOf(...)`.
+  - Never retain legacy fallback code or multi-version compatibility matrices for older versions. When upstream updates, bump the target version and retire the old version immediately.
 
 ---
 
@@ -54,20 +55,22 @@ description: End-to-end workflow for onboarding a new target app and authoring t
 - **`bytecodePatch`**: High-level Dalvik AST transforms via dexlib2 fingerprints and instruction injection (`addInstructions(0, "return-void")`).
 - **`resourcePatch`**: XML DOM manipulation (`AndroidManifest.xml`, `res/xml/*.xml`) executed prior to DEX assembly.
 - **`rawResourcePatch`**: Deterministic byte-level ELF string redirection, companion `.so` zeroing, or asset binary patching.
-- **`universalPatch`**: Generic patches omitting `compatibleWith(...)`, applicable across any target APK without app-specific obfuscation dependencies.
+- Universal patches are ordinary patches that omit `compatibleWith(...)`, making them applicable across any target APK without app-specific obfuscation dependencies. There is no special `universalPatch` typology in the patcher engine.
 
 ---
 
 ## 3. Recon Procedure
 
 ### A. Artifact Placement
-Place candidate APK, APKM, or XAPK files into `candidate_apks/` or project download search directories. Never commit raw binary APKs to version control.
+Place candidate APK, APKM, or XAPK files into `candidate-apks/` (note: some companion repositories use `candidate_apks/`; keep `candidate-apks/` with hyphen for this repository and preserve cross-repo directory naming without renaming folders). Never commit raw binary APKs to version control.
 
 ### B. Badging & Version Metadata Extraction
 Extract target package name, version name, version code, and SDK requirements:
 
 ```bash
-aapt2 dump badging candidate_apks/<app>.apk | grep -E "(package: name=|versionCode=|versionName=|sdkVersion:)"
+# Derive aapt2 dynamically from local.properties sdk.dir if not in PATH:
+AAPT2="$(grep '^sdk.dir=' local.properties | cut -d= -f2)/build-tools/$(ls $(grep '^sdk.dir=' local.properties | cut -d= -f2)/build-tools | sort -V | tail -n 1)/aapt2"
+"${AAPT2:-aapt2}" dump badging candidate-apks/<app>.apk | grep -E "(package: name=|versionCode=|versionName=|sdkVersion:)"
 ```
 
 Record the following metadata:
@@ -81,7 +84,7 @@ Record the following metadata:
 Dump the decoded manifest tree to a scratch path outside git tracking:
 
 ```bash
-aapt2 dump xmltree --file AndroidManifest.xml candidate_apks/<app>.apk > scratch/manifest_tree.txt
+"${AAPT2:-aapt2}" dump xmltree --file AndroidManifest.xml candidate-apks/<app>.apk > scratch/manifest_tree.txt
 ```
 
 ### D. Telemetry Component Inventory
@@ -117,7 +120,7 @@ Component scanners (App Manager, Exodus Privacy) frequently flag Google ML Kit c
 When the target application bundles native libraries:
 1. Inspect bundled native libraries:
    ```bash
-   unzip -l candidate_apks/<app>.apk "lib/*"
+   unzip -l candidate-apks/<app>.apk "lib/*"
    ```
 2. Scan for embedded telemetry endpoints in native binaries:
    ```bash
@@ -133,7 +136,7 @@ Scan DEX files with `androguard` to locate stable SDK entrypoints and verify exa
 ./venv/bin/python -c '
 from androguard.core.apk import APK
 from androguard.core.dex import DEX
-apk = APK("candidate_apks/<app>.apk")
+apk = APK("candidate-apks/<app>.apk")
 for dex_bytes in apk.get_all_dex():
     dex = DEX(dex_bytes)
     for cls in dex.get_classes():
@@ -166,39 +169,50 @@ Always store intermediate recon dumps in `scratch/` or `<appDataDir>/brain/<conv
 
 ## 4. Registration & Documentation Deliverables
 
-Onboarding a new target app requires four synchronized deliverables, all committed in the SAME atomic commit as the app's first patch:
-1. `Constants.kt` entry
-2. `PatchExecutionTest.kt` entry
-3. `README.md` Supported Apps table update
-4. `docs/apps/<app_id>.md` comprehensive application guide
+Onboarding a new target app requires synchronized deliverables, all committed in the SAME atomic commit as the app's first patch:
+1. `Constants.kt` entry inside `object Constants { ... }`
+2. `PatchExecutionTest.kt` entry in `TargetApp`
+3. `README.md` Supported Apps table update (adhering strictly to repository-specific column schema)
+4. `docs/apps/<app_id>.md` comprehensive application guide (including mandatory Behavioral Hazards Warning)
+5. `docs/compatibility.md` synchronization when that file exists in the repository
 
 ### A. Centralized Constants (`Constants.kt`)
 File: `patches/src/main/kotlin/app/morphe/patches/shared/Constants.kt`
 
-Add package name, single target version, and `Compatibility` contract:
+Add package name, target version, and `Compatibility` contract inside `object Constants`:
 
 ```kotlin
-const val <APP>_PACKAGE_NAME = "com.example.android"
-const val <APP>_TARGET_VERSION = "1.2.3.4"
+object Constants {
+    // ... existing constants ...
 
-val COMPATIBILITY_<APP> = Compatibility(
-    name = "<App Name>",
-    packageName = <APP>_PACKAGE_NAME,
-    apkFileType = ApkFileType.APK, // Use ApkFileType.APKM or ApkFileType.XAPK for bundles
-    appIconColor = 0x123456,
-    targets = listOf(
-        AppTarget(
-            version = <APP>_TARGET_VERSION,
-            description = "Download com.example.android v$<APP>_TARGET_VERSION (APK) from APKMirror",
+    const val <APP>_PACKAGE_NAME = "com.example.android"
+    const val <APP>_TARGET_VERSION = "1.2.3.4"
+
+    val COMPATIBILITY_<APP> = Compatibility(
+        name = "<App Name>",
+        packageName = <APP>_PACKAGE_NAME,
+        apkFileType = ApkFileType.APK, // Use ApkFileType.APKM or ApkFileType.XAPK for bundles
+        appIconColor = 0x123456,
+        targets = listOf(
+            AppTarget(
+                version = <APP>_TARGET_VERSION,
+                description = "Download com.example.android v$<APP>_TARGET_VERSION (APK) from APKMirror",
+            )
         )
     )
-)
+}
 ```
 
-**Single Target Version Rule**: Keep strictly ONE `AppTarget` entry in `targets`.
+**Single Version / ABI Variant Rule**: Maintain strictly ONE upstream version. If upstream ships separate 32-bit and 64-bit APKs, declare one `AppTarget` per ABI variant under the same upstream version.
 
-### B. Runner Registry (`PatchExecutionTest.kt`)
+### B. Runner Registry (`PatchExecutionTest.kt`) & Mapping Invariant
 File: `patches/src/main/kotlin/util/PatchExecutionTest.kt`
+
+Every target app establishes a 1:1:1:1 mapping:
+- `TargetApp.id`: CLI/runner identifier (e.g. `instagram`, `xiaomi_earbuds`)
+- `TargetApp.patchDirectoryPart`: Subdirectory under `patches/src/main/kotlin/app/morphe/patches/` (usually matches `id`, but can diverge, e.g. `xiaomi_earbuds` id pointing to `xiaomi` directory)
+- Guide filename: `docs/apps/<id>.md`
+- README table row: Target entry matching the target repo's table columns
 
 Add the target to `enum class TargetApp`:
 
@@ -212,15 +226,19 @@ Add the target to `enum class TargetApp`:
         "com.example.android_${Constants.<APP>_TARGET_VERSION}.apkm",
     ),
     filePattern = Regex("(?i).*<app_id>.*\\.(?:apk|apkm|xapk)$"),
-    patchDirectoryPart = "<app_id>",
+    patchDirectoryPart = "<app_id>", // e.g. "xiaomi" when id is "xiaomi_earbuds"
 ),
 ```
 
 ### C. Supported Apps Table (`README.md`)
 File: `README.md`
 
-Add the application row to the `## Supported Apps` table:
+Follow the target repository's existing table convention:
+- In `kveld-extra-morphe-patches`: 3 columns (`App | Package | Target Version`).
+- In repositories like `brave-origin`: 6 columns (`Application | Package ID | Target Version | Architecture/Variant | Download Source | Complete Guide`).
+Do not force a foreign column schema.
 
+Example for this repository:
 ```markdown
 | <App Name> | `<package_name>` | <target_version> |
 ```
@@ -228,7 +246,7 @@ Add the application row to the `## Supported Apps` table:
 ### D. Application Guide Deliverable (`docs/apps/<app_id>.md`)
 File: `docs/apps/<app_id>.md`
 
-Every new application onboarding MUST produce a dedicated guide with this exact structure:
+Every new application onboarding MUST produce a dedicated guide with this exact structure, including a mandatory **Behavioral Hazards & Warnings** section:
 
 ```markdown
 # <App Name>: Complete Patch & Architecture Guide
@@ -258,6 +276,13 @@ Comprehensive technical, architecture, and patch guide for **<App Name>** (`<pac
 
 ---
 
+## Behavioral Hazards & Warnings
+
+> [!WARNING]
+> Document critical user-facing trade-offs, potential upstream breaking points, preserved services (e.g. push tokens, billing), or components that must NOT be removed (e.g. MLKit breakage for QR/barcodes).
+
+---
+
 ## Deep Technical Patch Breakdown
 
 ### 1. Block Telemetry & Trackers (`<appId>BlockTelemetryPatch`)
@@ -266,9 +291,13 @@ Comprehensive technical, architecture, and patch guide for **<App Name>** (`<pac
 - **Bytecode Hooks**: Stubs telemetry dispatch methods with early `return-void`.
 ```
 
-### E. Package Directory
+### E. Package Directory & Extension Payloads
 Create the target package directory:
-`patches/src/main/kotlin/app/morphe/patches/<app_id>/`
+`patches/src/main/kotlin/app/morphe/patches/<patchDirectoryPart>/`
+
+**Extension Payload Invariant**: When bytecode hooks require companion Java/Kotlin runtime logic, always link via `dependsOn(sharedExtensionPatch)` rather than calling `extendWith("extensions/extension.mpe")` directly. Direct calls invoke redundant `ClassMerger` passes and heavily degrade build performance.
+
+**Release Catalog Protection**: Never execute `./gradlew generatePatchesList` in the repository checkout: it rewrites the tracked `patches-list.json`, which is managed strictly by the CI release pipeline.
 
 ---
 
@@ -279,9 +308,11 @@ Telemetry blocking and asset debloating implementations are partitioned into ded
 ### A. Telemetry Blocking Implementation (`telemetry-blocking`)
 - **When to Invoke**: Invoke when implementing the primary telemetry suppression suite for a target application, including manifest-level permission stripping, component disabling, opt-out metadata injection, and Dalvik bytecode dispatcher stubs.
 - **What It Delivers**:
-  - Manifest purge implementation via `stripPermissionsWhere`, `disableComponentsByName`, and `setApplicationMetaData`.
+  - Manifest purge implementation using shared helpers in `app.morphe.patches.shared.ManifestXml.kt`: `stripPermissionsWhere`, `disableComponentsWhere`, `disableComponentsByName`, and `setApplicationMetaData`.
+  - Bytecode stubbing via `app.morphe.patches.shared.BytecodeUtils.kt`: `replaceWithReturnVoid()`, `replaceWithReturnBoolean(value)`, and `clearTryBlocks()` to eliminate dangling exception blocks that trigger Dalvik/ART `VerifyError`.
+  - Direction-inversion trap awareness: gatekeeper methods named `isTrackingDisabled`, `isLimitAdTrackingEnabled`, or `areNotificationsOptedOut` must return `true` (0x1) to disable tracking, whereas methods like `isAnalyticsEnabled` must return `false` (0x0).
+  - Bytecode return type validation: assert `returnType != "V"` before attempting return-value injections, and verify method signature return types.
   - Component discovery registrar pruning patterns and the ML Kit scanner false-positive caveat.
-  - Dalvik bytecode dispatcher stubbing patterns (`return-void`, boolean getters, and asynchronous bridge Promise resolvers).
   - Reverse traversal multi-return hook insertion and register stability invariants.
   - The zero-zombie fingerprint contract and `[Patch Name]` diagnostic telemetry logging standard.
   - Verification assertions against the compiled APK manifest tree via `aapt2`.
@@ -294,7 +325,7 @@ Telemetry blocking and asset debloating implementations are partitioned into ded
   - Localization slimming for Android `res/values-*/` and Chromium DataPack v5 `assets/locales/*.pak` with safe fallback preservation.
   - Screen density (`drawable-*dpi`, `mipmap-*dpi`) and non-phone UI mode trimming with launcher icon protection and orphan asset preservation.
   - Replacement of heavy onboarding media and editor stickers with minimal container headers and transparent PNG stubs.
-  - Background wakeup and periodic sync elimination via `BackgroundSyncPurge` patterns.
+  - Background wakeup and periodic sync elimination via `BackgroundSyncPurgePatch` patterns.
   - Guidelines for structuring one independent opt-in patch per debloat axis (`default = false`).
   - Reference: `.agents/skills/app-debloat/SKILL.md`.
 
@@ -306,19 +337,20 @@ Telemetry blocking and asset debloating implementations are partitioned into ded
 Execute Morphe Patcher against the target APK with all patches active:
 
 ```bash
-# Execute patch test by registered target app id
-./gradlew runPatchTest -Papp=<app_id>
+# Execute patch test by registered target app id and candidate APK
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk
 
-# Or with an explicit APK path
-./gradlew runPatchTest -Papk=candidate_apks/<app>.apk
+# Force all boolean patch options on (covers opt-in toggles)
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -PallOptions=true
 
-# When patch options exist, force all boolean options on
-./gradlew runPatchTest -Papp=<app_id> -PallOptions=true
+# Byte-identical DEX proof for performance or refactor changes
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -PdexDigest=build/digest-before.txt
 ```
 
 #### Quiet Gate Invocation (Agent Standard)
+Always redirect full output to a git-ignored file in `build/` and inspect the verdict:
 ```bash
-./gradlew runPatchTest -Papp=<app_id> --console=plain > build/patchtest-<app_id>.log 2>&1; rc=$?; sed -n '/FINAL PATCHING RESULT/,$p' build/patchtest-<app_id>.log | grep -v '^\s*at ' || tail -40 build/patchtest-<app_id>.log; echo "exit=$rc"
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -PallOptions=true --console=plain > build/patchtest-<app_id>.log 2>&1; rc=$?; sed -n '/FINAL PATCHING RESULT/,$p' build/patchtest-<app_id>.log | grep -v '^\s*at ' || tail -40 build/patchtest-<app_id>.log; echo "exit=$rc"
 ```
 
 #### Gate Pass Criteria
@@ -328,11 +360,15 @@ Execute Morphe Patcher against the target APK with all patches active:
 - Detected Smali Compile Errors: `0`
 - Exceptions: `0`
 
-### B. Lint and Compiler Checks
-Run standard project checks:
+### B. Lint, Unit Tests and Compiler Checks
+Run standard project checks and harness unit tests:
 
 ```bash
-./gradlew check
+# Unit tests for RE update harness
+./venv/bin/python -m unittest discover harness/tests
+
+# Static lint and compilation check (quiet to build/)
+./gradlew check --console=plain > build/check.log 2>&1; rc=$?; tail -25 build/check.log; echo "exit=$rc"
 ```
 
 ### C. Injection Proof via Output APK Inspection
@@ -340,21 +376,23 @@ Verify modifications on the actual output APK artifacts rather than trusting std
 
 ```bash
 # Generate signed and aligned output APK
-./gradlew runPatchTest -Papp=<app_id> -DoutputApk=build/test-<app_id>.apk
+./gradlew runPatchTest -Papp=<app_id> -Papk=candidate-apks/<app>.apk -DoutputApk=build/test-<app_id>.apk
 ```
 
 *Note*: `-DoutputApk` paths work with or without the `.apk` extension per the runner's path normalization logic (e.g. `-DoutputApk=build/test` normalizes to `build/test.apk`).
 
 #### Verification Commands
 ```bash
+AAPT2="$(grep '^sdk.dir=' local.properties | cut -d= -f2)/build-tools/$(ls $(grep '^sdk.dir=' local.properties | cut -d= -f2)/build-tools | sort -V | tail -n 1)/aapt2"
+
 # 1. Verify stripped permissions in output APK
-aapt2 dump xmltree --file AndroidManifest.xml build/test-<app_id>.apk | grep -E "E: uses-permission.*android:name.*(AD_ID|ACCESS_ADSERVICES)"
+"${AAPT2:-aapt2}" dump xmltree --file AndroidManifest.xml build/test-<app_id>.apk | grep -E "E: uses-permission.*android:name.*(AD_ID|ACCESS_ADSERVICES)"
 
 # 2. Verify disabled components have android:enabled="false" (0x0)
-aapt2 dump xmltree --file AndroidManifest.xml build/test-<app_id>.apk | grep -B 2 -A 5 "AppMeasurementService"
+"${AAPT2:-aapt2}" dump xmltree --file AndroidManifest.xml build/test-<app_id>.apk | grep -B 2 -A 5 "AppMeasurementService"
 
 # 3. Verify injected opt-out metadata
-aapt2 dump xmltree --file AndroidManifest.xml build/test-<app_id>.apk | grep -B 2 -A 5 "firebase_analytics_collection_enabled"
+"${AAPT2:-aapt2}" dump xmltree --file AndroidManifest.xml build/test-<app_id>.apk | grep -B 2 -A 5 "firebase_analytics_collection_enabled"
 ```
 
 Assert that:
@@ -369,7 +407,7 @@ For target applications integrated with the automated update harness (`harness/u
 ./venv/bin/python harness/update.py --doctor
 
 # Non-destructive audit of a new target APK version
-./venv/bin/python harness/update.py <path-to-new-apk> --audit
+./venv/bin/python harness/update.py candidate-apks/<new-apk> --audit
 ```
 *Note*: Applications without a dedicated harness pipeline are audited manually and validated via `./gradlew runPatchTest -Papp=<app_id>`.
 
@@ -378,22 +416,14 @@ For target applications integrated with the automated update harness (`harness/u
 ## 7. Device Validation & Traffic Audit
 
 ### A. Automated ADB Smoke Install Gate
-Use `validation/smoke_install.py` against a connected Android device matching the target ABI (`arm64-v8a`) and minimum SDK:
+Use `validation/smoke_install.py` against a connected Android device matching the target ABI (`arm64-v8a`) and minimum SDK. Always install the fused patched APK generated in `build/test-<app_id>.apk`:
 
 ```bash
-# Single standalone APK
+# Single standalone APK or fused bundle
 ./venv/bin/python validation/smoke_install.py build/test-<app_id>.apk --uninstall-on-conflict
 
 # Explicit device serial if multiple devices are attached
 ./venv/bin/python validation/smoke_install.py build/test-<app_id>.apk --serial <serial> --uninstall-on-conflict
-```
-
-#### Split APKs & APKM Bundles
-When testing split APKs extracted from an APKM or XAPK bundle:
-- **Critical ADB Constraint**: `adb install-multiple` requires EVERY split file argument to end with the `.apk` extension. Ensure all split files are named `<name>.apk`.
-
-```bash
-./venv/bin/python validation/smoke_install.py build/splits/base.apk build/splits/split_config.arm64_v8a.apk --uninstall-on-conflict
 ```
 
 #### Post-Test Cleanup
@@ -408,39 +438,52 @@ For non-trivial telemetry and background sync modifications, perform a comparati
 1. Run vanilla APK, measure background jobs and telemetry dispatch.
 2. Run patched APK, confirm telemetry endpoints remain silent and app functions with zero crashes.
 
-### C. Runtime Traffic Audit
-Perform a runtime packet capture to audit network traffic and verify telemetry suppression:
+### C. Runtime Traffic Audit (Optional Tooling)
+Runtime packet capture audits require `tcpdump` on the device and optional analysis tools (`tshark`). Note that `tcpdump` and `tshark` are optional tools that may not be available in standard PATH environments.
 
 ```bash
-# 1. Start packet capture on device
-adb -s <serial> shell su -c "tcpdump -i any -s 0 -w /data/local/tmp/traffic.pcap" &
+# 1. Verify tcpdump binary exists on device first
+adb -s <serial> shell "which tcpdump || ls /data/local/tmp/tcpdump" || { echo "tcpdump not found on device; skipping traffic capture"; exit 0; }
+
+# 2. Start packet capture on device with packet limit or bound to app UID/IPs
+adb -s <serial> shell su -c "tcpdump -i any -s 0 -c 1000 -w /data/local/tmp/traffic.pcap" &
 TCPDUMP_PID=$!
 
-# 2. Launch patched app and exercise standard user flows for 60 seconds
+# 3. Launch patched app and exercise standard user flows
 adb -s <serial> shell monkey -p <package_name> -c android.intent.category.LAUNCHER 1
-sleep 60
+sleep 30
 
-# 3. Stop capture and pull pcap file
-adb -s <serial> shell su -c "pkill tcpdump"
+# 4. Stop capture with specific process pattern and pull pcap
+adb -s <serial> shell su -c "pkill -f 'tcpdump -i any'"
 adb -s <serial> pull /data/local/tmp/traffic.pcap scratch/traffic.pcap
-adb -s <serial> shell su -c "rm /data/local/tmp/traffic.pcap"
+adb -s <serial> shell su -c "rm -f /data/local/tmp/traffic.pcap"
+
+# 5. Assert pcap contains packets (>0 bytes and non-empty). Never report "silent telemetry" if capture was empty!
+if [ ! -s scratch/traffic.pcap ]; then
+    echo "ERROR: Packet capture empty or missing. Aborting traffic analysis."
+fi
 ```
 
-#### Protocol & Host Inventory Extraction
-```bash
-# Extract TLS Server Name Indication (SNI) hostnames
-tshark -r scratch/traffic.pcap -Y "tls.handshake.type == 1" -T fields -e tls.handshake.extensions_server_name | sort -u
+**Never Commit PCAPs**: `.pcap` capture files must stay in `scratch/` or git-ignored paths and must never be committed.
 
-# Extract QUIC Initial packet server names (HTTP/3 traffic)
-tshark -r scratch/traffic.pcap -Y "quic" -T fields -e quic.tls.handshake.extensions_server_name | sort -u
+#### Protocol & Host Inventory Extraction (when tshark is available)
+```bash
+if command -v tshark >/dev/null 2>&1; then
+    # Extract TLS Server Name Indication (SNI) hostnames
+    tshark -r scratch/traffic.pcap -Y "tls.handshake.type == 1" -T fields -e tls.handshake.extensions_server_name | sort -u
+
+    # Extract QUIC Initial packet server names (HTTP/3 traffic)
+    tshark -r scratch/traffic.pcap -Y "quic" -T fields -e quic.tls.handshake.extensions_server_name | sort -u
+fi
 ```
 
 #### Traffic Audit Caveats & Blind Spots
 When reporting network audit results, always document technical blind spots:
-1. **QUIC / HTTP/3 Traffic**: UDP port 443 traffic bypasses standard HTTP/HTTPS forward proxies unless UDP 443 is blocked or intercepted at the firewall. Inspect QUIC Initial frames directly.
-2. **Encrypted Client Hello (ECH)**: TLS 1.3 connections negotiating ECH encrypt the inner SNI, exposing only outer provider hostnames.
-3. **DNS-over-TLS (DoT) / DNS-over-HTTPS (DoH)**: Android Private DNS encrypts DNS resolution over port 853 or port 443. Queries do not appear in standard plaintext UDP 53 captures.
-4. **Evidence Standard**: Report observed hostnames and explicit caveats. Never claim "100% telemetry blocked" beyond the empirical evidence collected from traffic dumps.
+1. **Empty Capture Hazard**: Never interpret an empty pcap file or failed capture run as proof that telemetry is silent. Abort report if capture failed.
+2. **QUIC / HTTP/3 Traffic**: UDP port 443 traffic bypasses standard HTTP/HTTPS forward proxies unless UDP 443 is blocked or intercepted at the firewall. Inspect QUIC Initial frames directly.
+3. **Encrypted Client Hello (ECH)**: TLS 1.3 connections negotiating ECH encrypt the inner SNI, exposing only outer provider hostnames.
+4. **DNS-over-TLS (DoT) / DNS-over-HTTPS (DoH)**: Android Private DNS encrypts DNS resolution over port 853 or port 443. Queries do not appear in standard plaintext UDP 53 captures.
+5. **Evidence Standard**: Report observed hostnames and explicit caveats. Never claim "100% telemetry blocked" beyond the empirical evidence collected from traffic dumps.
 
 ---
 
@@ -462,6 +505,7 @@ Every completed unit of work must be committed immediately as an isolated, indep
 ### B. Conventional Commits Standards
 - Written strictly in English.
 - Imperative mood, concise summary line.
+- Plain ASCII only: no emojis, unicode pictographs, or non-ASCII symbols.
 - Zero AI attribution, zero `Co-Authored-By` lines.
 
 ### C. Direct Commit & No-Push Invariant
@@ -470,7 +514,7 @@ Every completed unit of work must be committed immediately as an isolated, indep
 - **Strict No-PR**: Never generate PR titles, PR descriptions, or suggest opening PRs.
 
 ### D. Mandatory Post-Close Adversarial Audit (audit-stack)
-After all commits in A are landed, automatically run the `audit-stack` skill against the onboarding changeset. This step is part of the pass, not optional, and requires no user prompt.
+After all commits in A are landed, automatically run the `audit-stack` skill against the onboarding changeset before pushing (`origin/<base>..HEAD`). Never run per-commit auto-audits.
 1. **Scope**: Strictly the onboarding scope — `patches/.../<app_id>/`, `docs/apps/<app_id>.md`, and the app's hunks in `Constants.kt` / `PatchExecutionTest.kt` / `README.md`. Explicitly exclude `FOREIGN_IN_PROGRESS_WORK` (uncommitted files and directories outside the app scope); never stage, modify, or report foreign work as part of this audit.
 2. **Remediation precedence**: `audit-stack`'s autonomous fix loop runs through the AGY delegation in force — fixes are applied by the same AGY worker conversations (steered with concrete findings), gates are executed by the orchestrator. Never fix project files directly from the orchestrator; never use another harness's subagents for implementation.
 3. **Fix commits**: Each confirmed fix lands as its own `fix(<app_id>): ...` commit after re-running the Section 6 gates. Loop until the audit reports zero blocking findings.
