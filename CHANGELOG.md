@@ -1,3 +1,22 @@
+## [1.3.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.2.0...v1.3.0) (2026-10-09)
+
+### Bug Fixes
+
+* **powerpoint:** resolve obfuscated LicenseStatus class in licenseStatusIsPremiumFingerprint ([9e2cde0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/9e2cde07213bf65a8507cbea06cfa8a8e8530fb7))
+
+### New Features
+
+* **powerpoint:** add Bypass Code Transparency patch ([7b8f540](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7b8f5401f5cebc3fedbc3f85e95405a33c6c1ba1))
+* **powerpoint:** add Disable Ads patch ([08459c7](https://github.com/kveld9/kveld-extra-morphe-patches/commit/08459c77b2b603427a7f8d50e208f1bee5a6467f))
+* **powerpoint:** add Disable Login Requirement patch ([26f46a5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/26f46a56c9bbb10b77ab500bb9e0159315edfc9b))
+* **powerpoint:** add fingerprint definitions for core patches ([231a655](https://github.com/kveld9/kveld-extra-morphe-patches/commit/231a6553c18b35b255038a723150880fbbaf3ce8))
+* **powerpoint:** add Remove Shared User ID patch ([756ec78](https://github.com/kveld9/kveld-extra-morphe-patches/commit/756ec78caaab35619f2aafd4c5d8a85d6c652930))
+* **powerpoint:** add Unlock 365 Family patch ([bd3d3c6](https://github.com/kveld9/kveld-extra-morphe-patches/commit/bd3d3c67c14d000495e6fc84473f365e94a70847))
+
+### Code Refactoring
+
+* **powerpoint:** merge ad measurement nullification into telemetry blocking patch ([90e6559](https://github.com/kveld9/kveld-extra-morphe-patches/commit/90e6559c008632e53781c899500f26bb5228abd8))
+
 ## [1.2.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.1.0...v1.2.0) (2026-10-09)
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "patches": [
     {
       "name": "Block Telemetry & Trackers",
@@ -60,7 +60,7 @@
     },
     {
       "name": "Block Telemetry & Trackers",
-      "description": "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods plus MUTSDK receivers, disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
+      "description": "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
       "default": true,
       "dependencies": [
         "ResourcePatch"
@@ -104,6 +104,58 @@
           "targets": [
             {
               "version": "12.19.1-release.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Bypass Code Transparency",
+      "description": "Bypasses the code transparency checks.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Disable Login Requirement",
+      "description": "Removes login requirement and FTUX paywall screens.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -275,6 +327,32 @@
       ]
     },
     {
+      "name": "Remove Shared User ID",
+      "description": "Removes the sharedUserId attribute from the manifest to prevent installation conflicts.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Screen Density Slimmer",
       "description": "Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved.",
       "default": false,
@@ -309,6 +387,32 @@
           "values": null
         }
       ]
+    },
+    {
+      "name": "Unlock 365 Family",
+      "description": "Unlocks Microsoft 365 Family subscription features locally.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.powerpoint",
+          "name": "PowerPoint",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#E44C50",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20034",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
     },
     {
       "name": "X MLKit Vision Slimmer",
