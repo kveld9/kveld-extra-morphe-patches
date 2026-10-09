@@ -22,6 +22,7 @@ Technical documentation and patch catalog for Moovit on Android.
 | Patch Name | Typology | Default State | Dependencies | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Moovit Telemetry Manifest Purge` | Disables analytics and tracking services, providers, and receivers, and strips advertising permissions. |
+| **Fix Google Maps** | `bytecodePatch` | `true` (Enabled) | None | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |
 | **Moovit Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips advertising and tracking permissions, disables analytics services, providers, and receivers, and injects opt-out metadata in AndroidManifest.xml. |
 | **Locale Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. |
 | **Screen Density Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. |
@@ -89,6 +90,17 @@ The bytecode layer (`Block Telemetry & Trackers`) explicitly neutralizes 0 dispa
 - There is no concrete analytics dispatch class in base DEX for Moovit.
 - Manifest purge and declarative opt-out flags carry the entirety of tracker blocking.
 - Diagnostic telemetry emits standard log lines reporting 0 neutralized bytecode methods.
+
+### C. Google Maps Signature Spoofing (`bytecodePatch` + Companion Extension)
+
+When Moovit is re-packaged or signed with custom keys, Google Play Services rejects Google Maps SDK authentication due to certificate mismatch with the registered API key:
+- **Hook Point**: Injects an initialization call to `MoovitHelper.init()` in `MoovitApplication.onCreate`.
+- **Companion Extension Payload**: Bundles `MoovitHelper.java` via `extensions/extension.mpe`.
+- **Runtime Hook**:
+  - Uses `HiddenApiBypass` to bypass hidden API restrictions on Android P+.
+  - Dynamically proxies `ActivityThread.sPackageManager` and `ServiceManager.sCache["package"]`.
+  - Intercepts `getPackageInfo` and `getPackageInfoAsUser` calls for `com.tranzmate` to return the official Tranzmate signing certificate to Google Play Services.
+  - Guarantees full map tile loading, geocoding, and routing overlays without modifying host API keys.
 
 ---
 

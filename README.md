@@ -45,7 +45,7 @@
 </details>
 
 <details open>
-<summary>Moovit&nbsp;&nbsp;•&nbsp;&nbsp;<b>3 patches</b></summary>
+<summary>Moovit&nbsp;&nbsp;•&nbsp;&nbsp;<b>4 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -56,6 +56,7 @@
 | Patch | Description | Options |
 |----------|----------------|-----------|
 | **Block Telemetry & Trackers** | Disables analytics and tracking services, providers, and receivers, and strips advertising permissions. |  |
+| **Fix Google Maps** | Restores Google Maps rendering by spoofing the original package signature to Google Play Services. |  |
 | **Locale Slimmer** | Strips unselected language string tables and resources from base APK. Base fallback and English are always preserved. | • Locales to keep |
 | **Screen Density Slimmer** | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. | • Target screen density |
 
