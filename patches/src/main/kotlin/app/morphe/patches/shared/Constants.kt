@@ -45,4 +45,20 @@ object Constants {
             )
         )
     )
+    const val TWITTER_PACKAGE_NAME = "com.twitter.android"
+    const val TWITTER_TARGET_VERSION = "12.19.1-release.0"
+
+    val COMPATIBILITY_TWITTER = Compatibility(
+        name = "X",
+        packageName = TWITTER_PACKAGE_NAME,
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x000000,
+        targets = listOf(
+            AppTarget(
+                version = TWITTER_TARGET_VERSION,
+                description = "Download com.twitter.android v\$TWITTER_TARGET_VERSION (APKM) from APKMirror",
+            )
+        )
+    )
+
 }

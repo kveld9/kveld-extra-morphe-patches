@@ -21,6 +21,7 @@
 | App | Package | Target Version |
 | :--- | :--- | :--- |
 | Instagram | `com.instagram.android` | 447.0.0.55.81 |
+| X | `com.twitter.android` | 12.19.1-release.0 |
 
 ## Patches
 
