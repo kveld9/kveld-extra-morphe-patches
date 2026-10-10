@@ -83,10 +83,9 @@ enum class TargetApp(
         appName = "Lightroom",
         packageName = Constants.LRMOBILE_PACKAGE_NAME,
         candidateFilenames = listOf(
-            "com.adobe.lrmobile_11.6.01-711106010_2arch_7dpi_24lang_c7cc6b5fbd147df6887095eef60aa42e_apkmirror.com.apkm",
-            "lrmobile_${Constants.LRMOBILE_TARGET_VERSION}.apkm"
+            "lrmobile_${Constants.LRMOBILE_TARGET_VERSION}.apk"
         ),
-        filePattern = Regex("(?i).*(?:lrmobile|lightroom).*\\.(?:apk|apkm|xapk)$"),
+        filePattern = Regex("(?i).*(?:lrmobile|lightroom).*\\.apk$"),
         patchDirectoryPart = "lrmobile",
     ),
     CAPCUT(

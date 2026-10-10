@@ -100,12 +100,12 @@ object Constants {
     val COMPATIBILITY_LRMOBILE = Compatibility(
         name = "Lightroom",
         packageName = LRMOBILE_PACKAGE_NAME,
-        apkFileType = ApkFileType.APKM,
+        apkFileType = ApkFileType.APK,
         appIconColor = 0x001C34,
         targets = listOf(
             AppTarget(
                 version = LRMOBILE_TARGET_VERSION,
-                description = "Download com.adobe.lrmobile v\$LRMOBILE_TARGET_VERSION (APKM) from APKMirror",
+                description = "Download com.adobe.lrmobile v\$LRMOBILE_TARGET_VERSION (APK, PairIP-free) from Uptodown",
             )
         )
     )

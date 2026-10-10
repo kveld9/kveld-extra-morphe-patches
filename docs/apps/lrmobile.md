@@ -11,9 +11,9 @@ Technical documentation and patch catalog for Lightroom on Android.
 | **Target App** | Lightroom |
 | **Package Name** | `com.adobe.lrmobile` |
 | **Target Version** | `11.6.01` |
-| **Target Package Format** | APKM (Split APK Bundle) |
+| **Target Package Format** | APK (PairIP-free variant, arm64-v8a) |
 | **Primary Architecture** | `arm64-v8a` |
-| **Authoritative Source** | APKMirror |
+| **Authoritative Source** | Uptodown (APK variant, not the Play APKM bundle: the Play bundle ships PairIP integrity which kills resigned builds at boot) |
 
 ---
 
