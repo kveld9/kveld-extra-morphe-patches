@@ -27,8 +27,8 @@ done
 OWN_ROOT="$(git rev-parse --show-toplevel)"
 OWN_NAME="$(basename "$OWN_ROOT")"
 case "$OWN_NAME" in
-    kveld-extra-morphe-patches) DEFAULT_SIBLING="brave-origin-patches" ;;
-    brave-origin-patches) DEFAULT_SIBLING="kveld-extra-morphe-patches" ;;
+    kveld-extra-morphe-patches) DEFAULT_SIBLING="kveld-morphe-patches" ;;
+    kveld-morphe-patches|brave-origin-patches) DEFAULT_SIBLING="kveld-extra-morphe-patches" ;;
     *) echo "[SYNC] Unknown repo layout: $OWN_NAME" >&2; exit 2 ;;
 esac
 if [ -z "$SIBLING" ]; then
