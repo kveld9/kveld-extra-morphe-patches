@@ -22,6 +22,7 @@ Technical documentation and patch catalog for Microsoft Copilot on Android.
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Copilot Telemetry Manifest Purge` | `Custom Blocked Hosts` (Single-label, credentialed-URL, and IPv6 entries are skipped.) | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions. |
 | **Copilot Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | None | Strips advertising and tracking permissions, disables DataTransport, cross-sell, and HockeyApp components, and injects opt-out metadata in AndroidManifest.xml. |
+| **Disable Login Requirement** | `bytecodePatch` | `true` (Enabled) | None | None | Removes login requirement and FTUX paywall screens. Cloud-backed features still require sign-in server-side. |
 | **Copilot DPI Slimmer** | `resourcePatch` | `false` (Opt-in) | None | `Target screen density` | Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. Non-phone UI mode qualifiers (watch, television, car, vrheadset) are purged from drawable/mipmap resources. WARNING: Displays matching stripped densities will scale preserved assets. |
 | **Copilot Companion Native Slimmer** | `rawResourcePatch` | `false` (Opt-in) | None | None | Strips optional companion native binaries (React Native, Hermes, voice/dictation SDKs, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError; speech stripping breaks voice typing and dictation features. The HockeyApp native exception handler is load-bearing at startup (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and is therefore never stripped. |
 | **Copilot Junk Cleaner** | `rawResourcePatch` | `false` (Opt-in) | None | None | Purges non-functional build metadata, properties, proto descriptors, and duplicate license notices from APK root and META-INF while strictly protecting runtime assets and signatures. |
@@ -162,6 +163,19 @@ Prunes drawables and mipmaps for unselected screen densities to reduce APK size:
    - Purges non-functional root junk metadata: `DebugProbesKt.bin`, `stamp-cert-sha256`, `version-control-info.textproto`, `kotlin-tooling-metadata.json`, and `.properties`, `.proto`, `.textproto`, `.version` files.
    - Purges `META-INF` duplicate license and notice files (`LICENSE*`, `NOTICE*`, `README*`, `DEPENDENCIES*`, `AL2.0*`, `LGPL*`, `ASL2.0*`, `APACHE*`).
    - Strictly protects APK signatures (`.SF`, `.RSA`, `.DSA`, `.EC`), `MANIFEST.MF`, `META-INF/services/`, and DEX/ARSC assets.
+
+### G. Login Requirement & FTUX Paywall Removal (`bytecodePatch`)
+
+Removes mandatory sign-in and first-time user experience (FTUX) paywall screens via 3 targeted hooks:
+
+1. **First Run Experience Mark Complete**:
+   Intercepts `firstRunN0Fingerprint` (matching string `"FRE Completed"`), resolves the current activity via `OfficeActivityHolder.GetActivity()`, and invokes `OHubSharedPreferences.setFTUXShown(activity, true)`.
+
+2. **Sign-In Identity Nullification**:
+   Intercepts `IdentityLiblet.GetIdentityForSignInName` (`getIdentityForSignInNameFingerprint`), clears try blocks, and returns `null` (`const/4 v0, 0x0`, `return-object v0`).
+
+3. **SSO File Activation Bypass**:
+   Intercepts `FileActivationSSOManager.checkAndStartSSOIfRequired` (`checkAndStartSSOIfRequiredFingerprint`), clears try blocks, and returns `false` (`const/4 v0, 0x0`, `return v0`).
 
 ---
 
