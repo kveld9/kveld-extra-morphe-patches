@@ -31,6 +31,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **Hide Recommendation Items** | `bytecodePatch` | `true` (Enabled) | None | Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies. |
 | **Hide Recommended Users** | `bytecodePatch` | `true` (Enabled) | None | Hides recommended users popup shown when following someone. |
 | **Hide Live Threads** | `bytecodePatch` | `true` (Enabled) | None | Hides live threads. |
+| **No Shortened URL** | `bytecodePatch` | `false` (Opt-in) | None | Expands t.co shortened URLs, removing the click-tracking intermediary. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
 ---
@@ -171,5 +172,8 @@ The bytecode layer suppresses intrusive server-driven prompts, banners, and serv
    - **Hide Live Threads**:
      - Target: `FleetlineApiResponse` constructor (`com.x.http.spaces`), resolved dynamically via indexed string `FleetlineApiResponse(threads=`.
      - Transformation: Neutralizes constructor instructions by replacing `threads` with `Collections.emptyList()` before field assignment, suppressing live thread and space bar rendering at the top of the timeline.
+   - **No Shortened URL**:
+     - Target: `ApiTimelineUrl` constructor (`com.x.android.core.fragment`), resolved dynamically via indexed string `ApiTimelineUrl(url=`, and `GraphqlUrlsEntity` constructor, resolved dynamically via indexed string `GraphqlUrlsEntity(display_url=`.
+     - Transformation: Intercepts constructor field assignments and substitutes shortened `t.co` URLs with `expanded_url` when non-null (`if-eqz`), replacing the click-tracking redirect intermediary at parse time across timeline rich text and entity sets.
 
 Known layout limitation: on the APKM distribution all native code ships in APK splits, which the patcher passes through sign-only, so X Crash Native Slimmer logs a skip on this target and frees 0 bytes; it activates on standalone-APK layouts carrying bundled libs.
