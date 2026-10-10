@@ -341,16 +341,15 @@ private fun applyHostsRewrites(method: MutableMethod, rewrites: List<PendingHost
 
 private data class HostRewriteStats(
     val rewrittenStrings: Int,
-    val touchedClasses: Int,
     val ruleCounts: Map<String, Int>,
 )
 
 private fun BytecodePatchContext.blockHostsInDex(
     blockedHosts: Set<String>,
+    touchedClasses: MutableSet<String>,
     predicate: ((String) -> Boolean)? = null,
 ): HostRewriteStats {
     var rewrittenStrings = 0
-    var touchedClasses = 0
     val ruleCounts = mutableMapOf<String, Int>()
 
     classDefForEach { classDef ->
@@ -371,10 +370,12 @@ private fun BytecodePatchContext.blockHostsInDex(
             }
         }
 
-        if (classModified) touchedClasses++
+        if (classModified) {
+            touchedClasses.add(classDef.type)
+        }
     }
 
-    return HostRewriteStats(rewrittenStrings, touchedClasses, ruleCounts)
+    return HostRewriteStats(rewrittenStrings, ruleCounts)
 }
 
 // -- Primary Bytecode Patch --------------------------------------------------
@@ -391,7 +392,7 @@ val officeHubBlockTelemetryPatch = bytecodePatch(
     val customBlockedHosts by stringOption(
         key = "custom-blocked-hosts",
         title = "Custom Blocked Hosts",
-        description = "Comma-separated list of additional telemetry hostnames or domains to redirect to 0.0.0.0.",
+        description = "Comma-separated list of additional telemetry hostnames or domains to redirect to 0.0.0.0. Single-label, credentialed-URL, and IPv6 entries are skipped.",
         required = false,
     )
 
@@ -402,52 +403,81 @@ val officeHubBlockTelemetryPatch = bytecodePatch(
         hookTelemetryDispatchers(hookedMethods)
         hookAdMeasurementPlatformData(hookedMethods)
 
-        val userHosts = customBlockedHosts?.split(",")
-            ?.mapNotNull { raw ->
-                val candidate = extractCandidateHost(raw.trim().lowercase())
-                if (candidate.isNotEmpty() && candidate.length <= 253 && candidate !in RESERVED_HOST_EXCLUSIONS) {
-                    candidate
-                } else {
-                    null
-                }
-            }
-            ?.distinct()
-            ?: emptyList()
+        val userHosts = mutableListOf<String>()
+        val skippedUserHosts = mutableListOf<Pair<String, String>>()
 
-        val totalRuleCount = DEFAULT_BLOCKED_HOSTS.size + userHosts.size
+        customBlockedHosts?.split(",")?.forEach { rawToken ->
+            val sanitizedRaw = rawToken.replace("\r", " ").replace("\n", " ").trim()
+            if (sanitizedRaw.isEmpty()) return@forEach
+
+            if (sanitizedRaw.contains('@')) {
+                skippedUserHosts.add(sanitizedRaw to "credentials/userinfo not supported")
+                return@forEach
+            }
+
+            if (sanitizedRaw.startsWith('[') || sanitizedRaw.contains("::")) {
+                skippedUserHosts.add(sanitizedRaw to "IPv6 literals not supported")
+                return@forEach
+            }
+
+            val candidate = extractCandidateHost(sanitizedRaw.lowercase())
+            if (candidate.startsWith('[') || candidate.contains("::") || candidate.count { it == ':' } > 1) {
+                skippedUserHosts.add(sanitizedRaw to "IPv6 literals not supported")
+                return@forEach
+            }
+
+            if (candidate.isEmpty() || candidate.length > 253) {
+                skippedUserHosts.add(sanitizedRaw to "invalid host format")
+                return@forEach
+            }
+
+            if (candidate in RESERVED_HOST_EXCLUSIONS) {
+                skippedUserHosts.add(sanitizedRaw to "reserved host")
+                return@forEach
+            }
+
+            if (!candidate.contains('.')) {
+                skippedUserHosts.add(sanitizedRaw to "single-label domain not supported")
+                return@forEach
+            }
+
+            userHosts.add(candidate)
+        }
+
+        if (skippedUserHosts.isNotEmpty()) {
+            val skipDetails = skippedUserHosts.joinToString(", ") { "${it.first} (${it.second})" }
+            println("[Copilot Telemetry] Custom blocked hosts skipped (${skippedUserHosts.size}): $skipDetails.")
+        }
+
+        val distinctUserHosts = userHosts.distinct()
+        val totalRuleCount = DEFAULT_BLOCKED_HOSTS.size + distinctUserHosts.size
         if (totalRuleCount > 100_000) {
             println("[Copilot Telemetry] Warning: Blocklist contains $totalRuleCount rules. Memory usage and patching latency may be high.")
         }
 
+        val touchedClassTypes = mutableSetOf<String>()
+
         // Pass 1: Scoped pass for default telemetry endpoints within telemetry package prefixes
-        val defaultStats = blockHostsInDex(DEFAULT_BLOCKED_HOSTS) { isTelemetryCandidateClass(it) }
+        val defaultStats = blockHostsInDex(DEFAULT_BLOCKED_HOSTS, touchedClassTypes) { isTelemetryCandidateClass(it) }
 
         // Pass 2: Unscoped pass for user-supplied custom blocked hosts across all classes
-        val customStats = if (userHosts.isNotEmpty()) {
-            blockHostsInDex(userHosts.toSet(), predicate = null)
+        val customStats = if (distinctUserHosts.isNotEmpty()) {
+            blockHostsInDex(distinctUserHosts.toSet(), touchedClassTypes, predicate = null)
         } else {
-            HostRewriteStats(0, 0, emptyMap())
+            HostRewriteStats(0, emptyMap())
         }
 
         val totalRewritten = defaultStats.rewrittenStrings + customStats.rewrittenStrings
-        val totalClasses = defaultStats.touchedClasses + customStats.touchedClasses
+        val totalClasses = touchedClassTypes.size
 
         println("[Copilot Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods and rewrote $totalRewritten host literals across $totalClasses classes -> 0.0.0.0.")
 
-        if (userHosts.isNotEmpty()) {
-            val combinedRuleCounts = mutableMapOf<String, Int>()
-            defaultStats.ruleCounts.forEach { (host, count) ->
-                combinedRuleCounts[host] = (combinedRuleCounts[host] ?: 0) + count
-            }
-            customStats.ruleCounts.forEach { (host, count) ->
-                combinedRuleCounts[host] = (combinedRuleCounts[host] ?: 0) + count
-            }
-
-            val appliedUser = userHosts.filter { (combinedRuleCounts[it] ?: 0) > 0 }
-            val unappliedUser = userHosts.filter { (combinedRuleCounts[it] ?: 0) == 0 }
+        if (distinctUserHosts.isNotEmpty()) {
+            val appliedUser = distinctUserHosts.filter { (customStats.ruleCounts[it] ?: 0) > 0 }
+            val unappliedUser = distinctUserHosts.filter { (customStats.ruleCounts[it] ?: 0) == 0 }
 
             if (appliedUser.isNotEmpty()) {
-                val appliedSummary = appliedUser.joinToString(", ") { "$it (${combinedRuleCounts[it]} rewrites)" }
+                val appliedSummary = appliedUser.joinToString(", ") { "$it (${customStats.ruleCounts[it]} rewrites)" }
                 println("[Copilot Telemetry] Custom blocked hosts applied: $appliedSummary.")
             }
             if (unappliedUser.isNotEmpty()) {
