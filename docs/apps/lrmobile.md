@@ -42,4 +42,4 @@ Users and packagers must observe the following risks before applying resource sl
 3. **Locale Slimmer**:
    Recursively deletes unselected language-specific `values-*` directories. While base fallback strings (`res/values`) and English are retained, all stripped languages become unavailable. If the host system language is stripped, the application falls back to base or English strings.
 4. **Mandatory Backup & Verification**:
-   Users must retain a clean backup copy of the original Lightroom APK/APKM bundle and test the patched package thoroughly before replacing their active daily installation.
+   Users must retain a clean backup copy of the original Lightroom APK (PairIP-free variant) and test the patched package thoroughly before replacing their active daily installation.
