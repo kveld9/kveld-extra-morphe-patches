@@ -20,9 +20,9 @@ Technical documentation and patch catalog for Microsoft Copilot on Android.
 
 | Patch Name | Typology | Default State | Dependencies | Options | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Copilot Telemetry Manifest Purge` | `Custom Blocked Hosts` | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites telemetry endpoints to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions. |
+| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Copilot Telemetry Manifest Purge` | `Custom Blocked Hosts` | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions. |
 | **Copilot Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | None | Strips advertising and tracking permissions, disables DataTransport, cross-sell, and HockeyApp components, and injects opt-out metadata in AndroidManifest.xml. |
-| **Copilot DPI Slimmer** | `resourcePatch` | `false` (Opt-in) | None | `Target screen density` | Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. WARNING: Displays matching stripped densities will scale preserved assets. |
+| **Copilot DPI Slimmer** | `resourcePatch` | `false` (Opt-in) | None | `Target screen density` | Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. Non-phone UI mode qualifiers (watch, television, car, vrheadset) are purged from drawable/mipmap resources. WARNING: Displays matching stripped densities will scale preserved assets. |
 | **Copilot Companion Native Slimmer** | `rawResourcePatch` | `false` (Opt-in) | None | None | Strips optional companion native binaries (React Native, Hermes, voice/dictation SDKs, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError; speech stripping breaks voice typing and dictation features. The HockeyApp native exception handler is load-bearing at startup (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and is therefore never stripped. |
 | **Copilot Junk Cleaner** | `rawResourcePatch` | `false` (Opt-in) | None | None | Purges non-functional build metadata, properties, proto descriptors, and duplicate license notices from APK root and META-INF while strictly protecting runtime assets and signatures. |
 
@@ -118,32 +118,37 @@ Neutralizes Microsoft OneDS/Aria telemetry and ad measurement pipelines via 14 t
 
 ### D. DEX Hosts Rewrite Layer (Second-Layer Defense)
 
-Rewrites `const-string` and `const-string/jumbo` hostname and URL literals matching telemetry endpoints to `0.0.0.0` across candidate classes in telemetry package prefixes:
+Rewrites `const-string` and `const-string/jumbo` hostname and URL literals matching telemetry endpoints to `0.0.0.0` in a two-pass architecture:
 
-1. **Candidate Scoping**:
-   Scanned classes are strictly restricted to Microsoft telemetry packages (`core`, `mutsdk`, `asyncdatapointreporting`, `hockeyapp`, `crosssell`, `admeasurementpartner`) and Google/Firebase telemetry packages (`datatransport`, `measurement`, `analytics`, `crashlytics`).
+1. **Two-Pass Execution Architecture**:
+   - **Pass 1 (Scoped Defaults)**: Executes a scoped literal rewrite for default telemetry endpoints (`DEFAULT_BLOCKED_HOSTS`) strictly within candidate classes matching the 11 telemetry package prefixes.
+   - **Pass 2 (Unscoped Custom Hosts)**: Executes an unscoped literal rewrite across all classes for user-supplied custom blocked hosts (`custom-blocked-hosts`), logging per-host applied rewrite counts and explicitly reporting unapplied hosts.
 
-2. **Default Blocked Hosts (11 Endpoints)**:
+2. **Candidate Scoping**:
+   Scanned classes in Pass 1 are strictly restricted to Microsoft telemetry packages (`core`, `mutsdk`, `asyncdatapointreporting`, `hockeyapp`, `crosssell`, `admeasurementpartner`) and Google/Firebase telemetry packages (`datatransport`, `measurement`, `analytics`, `crashlytics`).
+
+3. **Default Blocked Hosts (11 Endpoints)**:
    - Microsoft OneDS / Aria / Vortex: `pipe.aria.microsoft.com`, `mobile.pipe.aria.microsoft.com`, `browser.pipe.aria.microsoft.com`, `vortex.data.microsoft.com`, `web.vortex.data.microsoft.com`, `telemetry.microsoft.com`, `watson.telemetry.microsoft.com`, `onecollector.cloudapp.net`.
    - Google / Firebase: `app-measurement.com`, `firebaselogging-pa.googleapis.com`, `crashlyticsreports-pa.googleapis.com`.
 
-3. **Exclusions & Config**:
+4. **Exclusions, Config & Egress Boundary**:
    - Reserved host exclusions: `localhost`, `localhost6`, `localhost.localdomain`, `0.0.0.0`, `127.0.0.1`, `::1`.
-   - Optional `custom-blocked-hosts` string option allows user-supplied host rules.
-   - Device verification: 75-second foreground tcpdump on physical device confirmed 0 WAN packets from the application (only LAN broadcast/SSDP chatter).
+   - Optional `custom-blocked-hosts` string option allows user-supplied host rules (normalized via candidate host extraction).
+   - Egress validation is bounded to a 75-second foreground idle observation window on physical device (0 app WAN packets observed, only LAN broadcast/SSDP chatter); background/scheduled jobs and user-triggered interaction flows remain unmeasured. Residual runtime-override paths (dynamic collector-URL setters and native JSON configuration overrides in OneDS) exist in bytecode but have no reachable callers or active configuration keys in this target version.
 
 ### E. Copilot DPI Slimmer (`resourcePatch`)
 
 Prunes drawables and mipmaps for unselected screen densities to reduce APK size:
 
-1. **Target Density Selection**:
+1. **Target Density Selection & Warning Behavior**:
    - Preserves drawables matching configured `targetDpi` (default `xxhdpi`).
    - Prunes unselected densities across `ldpi`, `mdpi`, `tvdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`.
+   - Emits an explicit diagnostic warning naming the unrecognized value (`Warning: Unknown target density '$rawInput', defaulting to xxhdpi.`) when an invalid density is passed, preserving the `xxhdpi` fallback.
 
 2. **Asset Protection & Single-Density Rules**:
    - Strictly preserves launcher and app icons (`ic_officehub`, `ic_copilot`, `ic_office`, `ic_launcher*`, plus manifest icon attributes).
    - Preserves `nodpi`, `anydpi`, non-DPI drawable directories, and single-density orphan assets (assets with no counterpart in the target density).
-   - Purges non-phone UI mode qualifiers (`watch`, `television`, `car`, `vrheadset`).
+   - Non-phone UI mode qualifiers (`watch`, `television`, `car`, `vrheadset`) are purged exclusively from `drawable` and `mipmap` resource directories.
 
 ### F. Companion Native Slimmer & Junk Cleaner (`rawResourcePatch`)
 
@@ -165,7 +170,7 @@ Prunes drawables and mipmaps for unselected screen densities to reduce APK size:
 Users and packagers must observe the following operational constraints before applying patches:
 
 1. **Opt-in Status for Resource Slimmers**:
-   Resource and asset slimmers (`Copilot DPI Slimmer`, `Copilot Companion Native Slimmer`, `Copilot Junk Cleaner`) and `Copilot Telemetry Manifest Purge` are opt-in and disabled by default (`default = false`). `Block Telemetry & Trackers` is enabled by default (`default = true`).
+   Resource and asset slimmers (`Copilot DPI Slimmer`, `Copilot Companion Native Slimmer`, `Copilot Junk Cleaner`) and `Copilot Telemetry Manifest Purge` are opt-in and disabled by default (`default = false`). `Block Telemetry & Trackers` is enabled by default (`default = true`). Note: the all-options test verdict is a startup/launch smoke validation only; React Native surfaces are expected-broken when `Copilot Companion Native Slimmer` is active (as documented in item 3 below).
 
 2. **DPI Fallback Consequences**:
    Pruning screen densities removes pre-rendered drawables for unselected densities. On devices whose screen density is stripped, Android scales remaining assets, which may introduce minor scaling artifacts.

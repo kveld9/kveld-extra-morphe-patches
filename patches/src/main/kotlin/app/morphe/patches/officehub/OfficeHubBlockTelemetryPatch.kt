@@ -272,42 +272,39 @@ private fun isTelemetryCandidateClass(type: String): Boolean {
     return false
 }
 
-private fun buildRewriteLiteral(literal: String, blockedHosts: Set<String>): String? {
+private fun extractCandidateHost(raw: String): String {
+    val withoutScheme = if (raw.contains("://")) raw.substringAfter("://") else raw
+    return withoutScheme
+        .substringBefore('/')
+        .substringBefore('?')
+        .substringBefore('#')
+        .substringBefore(':')
+        .trim()
+        .trimEnd('.')
+}
+
+private fun buildRewriteLiteral(literal: String, blockedHosts: Set<String>): Pair<String, String>? {
     if (literal.isBlank() || literal.length > 512) return null
     if (RESERVED_HOST_EXCLUSIONS.any { literal.equals(it, ignoreCase = true) }) return null
 
-    val candidateHost: String = if (literal.contains("://")) {
-        literal.substringAfter("://")
-            .substringBefore('/')
-            .substringBefore('?')
-            .substringBefore('#')
-            .substringBefore(':')
-            .trim()
-    } else {
-        literal.substringBefore('/')
-            .substringBefore('?')
-            .substringBefore('#')
-            .substringBefore(':')
-            .trim()
-    }
-
+    val candidateHost = extractCandidateHost(literal)
     if (candidateHost.isEmpty() || candidateHost.length > 253) return null
     if (candidateHost in RESERVED_HOST_EXCLUSIONS) return null
 
-    val isBlocked = blockedHosts.any { blocked ->
+    val matchedHost = blockedHosts.firstOrNull { blocked ->
         candidateHost.equals(blocked, ignoreCase = true) ||
             candidateHost.endsWith(".$blocked", ignoreCase = true)
-    }
+    } ?: return null
 
-    if (!isBlocked) return null
-
-    return literal.replace(candidateHost, SINK_HOST, ignoreCase = true)
+    val replacement = literal.replace(candidateHost, SINK_HOST, ignoreCase = true)
+    return Pair(replacement, matchedHost)
 }
 
 private data class PendingHostsRewrite(
     val index: Int,
     val register: Int,
     val replacement: String,
+    val matchedRule: String,
 )
 
 private fun collectHostsRewrites(method: MutableMethod, blockedHosts: Set<String>): List<PendingHostsRewrite> {
@@ -318,9 +315,9 @@ private fun collectHostsRewrites(method: MutableMethod, blockedHosts: Set<String
         if (opcode != Opcode.CONST_STRING && opcode != Opcode.CONST_STRING_JUMBO) continue
         val ref = (instruction as? ReferenceInstruction)?.reference as? StringReference ?: continue
         val original = ref.string
-        val replacement = buildRewriteLiteral(original, blockedHosts) ?: continue
+        val (replacement, matchedRule) = buildRewriteLiteral(original, blockedHosts) ?: continue
         val register = (instruction as? OneRegisterInstruction)?.registerA ?: continue
-        rewrites.add(PendingHostsRewrite(index, register, replacement))
+        rewrites.add(PendingHostsRewrite(index, register, replacement, matchedRule))
     }
     return rewrites
 }
@@ -342,12 +339,22 @@ private fun applyHostsRewrites(method: MutableMethod, rewrites: List<PendingHost
     }
 }
 
-private fun BytecodePatchContext.blockHostsInDex(blockedHosts: Set<String>): Pair<Int, Int> {
+private data class HostRewriteStats(
+    val rewrittenStrings: Int,
+    val touchedClasses: Int,
+    val ruleCounts: Map<String, Int>,
+)
+
+private fun BytecodePatchContext.blockHostsInDex(
+    blockedHosts: Set<String>,
+    predicate: ((String) -> Boolean)? = null,
+): HostRewriteStats {
     var rewrittenStrings = 0
     var touchedClasses = 0
+    val ruleCounts = mutableMapOf<String, Int>()
 
     classDefForEach { classDef ->
-        if (!isTelemetryCandidateClass(classDef.type)) return@classDefForEach
+        if (predicate != null && !predicate(classDef.type)) return@classDefForEach
 
         val mutableClass = mutableClassDefBy(classDef)
         var classModified = false
@@ -358,13 +365,16 @@ private fun BytecodePatchContext.blockHostsInDex(blockedHosts: Set<String>): Pai
                 applyHostsRewrites(method, rewrites)
                 rewrittenStrings += rewrites.size
                 classModified = true
+                for (rw in rewrites) {
+                    ruleCounts[rw.matchedRule] = (ruleCounts[rw.matchedRule] ?: 0) + 1
+                }
             }
         }
 
         if (classModified) touchedClasses++
     }
 
-    return Pair(rewrittenStrings, touchedClasses)
+    return HostRewriteStats(rewrittenStrings, touchedClasses, ruleCounts)
 }
 
 // -- Primary Bytecode Patch --------------------------------------------------
@@ -372,7 +382,7 @@ private fun BytecodePatchContext.blockHostsInDex(blockedHosts: Set<String>): Pai
 @Suppress("unused")
 val officeHubBlockTelemetryPatch = bytecodePatch(
     name = "Block Telemetry & Trackers",
-    description = "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites telemetry endpoints to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions.",
+    description = "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_OFFICEHUB)
@@ -393,20 +403,56 @@ val officeHubBlockTelemetryPatch = bytecodePatch(
         hookAdMeasurementPlatformData(hookedMethods)
 
         val userHosts = customBlockedHosts?.split(",")
-            ?.map { it.trim().lowercase() }
-            ?.filter { it.isNotEmpty() }
+            ?.mapNotNull { raw ->
+                val candidate = extractCandidateHost(raw.trim().lowercase())
+                if (candidate.isNotEmpty() && candidate.length <= 253 && candidate !in RESERVED_HOST_EXCLUSIONS) {
+                    candidate
+                } else {
+                    null
+                }
+            }
+            ?.distinct()
             ?: emptyList()
 
-        val allBlockedHosts = (DEFAULT_BLOCKED_HOSTS + userHosts)
-            .filterNot { it in RESERVED_HOST_EXCLUSIONS }
-            .toSet()
-
-        if (allBlockedHosts.size > 100_000) {
-            println("[Copilot Telemetry] Warning: Blocklist contains ${allBlockedHosts.size} rules. Memory usage and patching latency may be high.")
+        val totalRuleCount = DEFAULT_BLOCKED_HOSTS.size + userHosts.size
+        if (totalRuleCount > 100_000) {
+            println("[Copilot Telemetry] Warning: Blocklist contains $totalRuleCount rules. Memory usage and patching latency may be high.")
         }
 
-        val (rewrittenHosts, touchedHostClasses) = blockHostsInDex(allBlockedHosts)
+        // Pass 1: Scoped pass for default telemetry endpoints within telemetry package prefixes
+        val defaultStats = blockHostsInDex(DEFAULT_BLOCKED_HOSTS) { isTelemetryCandidateClass(it) }
 
-        println("[Copilot Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods and rewrote $rewrittenHosts host literals across $touchedHostClasses classes -> 0.0.0.0.")
+        // Pass 2: Unscoped pass for user-supplied custom blocked hosts across all classes
+        val customStats = if (userHosts.isNotEmpty()) {
+            blockHostsInDex(userHosts.toSet(), predicate = null)
+        } else {
+            HostRewriteStats(0, 0, emptyMap())
+        }
+
+        val totalRewritten = defaultStats.rewrittenStrings + customStats.rewrittenStrings
+        val totalClasses = defaultStats.touchedClasses + customStats.touchedClasses
+
+        println("[Copilot Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods and rewrote $totalRewritten host literals across $totalClasses classes -> 0.0.0.0.")
+
+        if (userHosts.isNotEmpty()) {
+            val combinedRuleCounts = mutableMapOf<String, Int>()
+            defaultStats.ruleCounts.forEach { (host, count) ->
+                combinedRuleCounts[host] = (combinedRuleCounts[host] ?: 0) + count
+            }
+            customStats.ruleCounts.forEach { (host, count) ->
+                combinedRuleCounts[host] = (combinedRuleCounts[host] ?: 0) + count
+            }
+
+            val appliedUser = userHosts.filter { (combinedRuleCounts[it] ?: 0) > 0 }
+            val unappliedUser = userHosts.filter { (combinedRuleCounts[it] ?: 0) == 0 }
+
+            if (appliedUser.isNotEmpty()) {
+                val appliedSummary = appliedUser.joinToString(", ") { "$it (${combinedRuleCounts[it]} rewrites)" }
+                println("[Copilot Telemetry] Custom blocked hosts applied: $appliedSummary.")
+            }
+            if (unappliedUser.isNotEmpty()) {
+                println("[Copilot Telemetry] Custom blocked hosts unapplied (0 rewrites): ${unappliedUser.joinToString(", ")}.")
+            }
+        }
     }
 }
