@@ -3,7 +3,18 @@ name: new-telemetry-app
 description: End-to-end workflow for onboarding a new target app and authoring telemetry-blocking patches: reconnaissance, registration, patch authoring, verification gates, device smoke test, and network traffic auditing.
 ---
 
+<!-- Canonical shared copy: byte-identical file in kveld-extra-morphe-patches and brave-origin-patches (.agents/skills, hardlinked to .claude/skills inside each repo). Keep copies byte-identical; propagate edits with scripts/sync_shared_skills.sh. Repo-specific deltas live in section 0 below, never in forked copies. -->
+
 # New Target App Onboarding & Telemetry Hardening
+
+## 0. Repository Adaptation Notes (Shared Canonical Copy)
+
+- **Sync invariant**: this file is canonical and byte-identical in both sibling repos. Edit in either repo, then run `scripts/sync_shared_skills.sh` (or `--check` in CI) to propagate. Never create per-repo forks.
+- **README**: update only the hand-maintained Supported Targets table above `PATCHES_START`/`PATCHES_END`. Never edit the generated Patch Catalog block, `patches-list.json`, `patches-bundle.json`, or `CHANGELOG.md`; the release pipeline regenerates them. Verify catalog registration from a temporary directory outside the checkout; never run `generatePatchesList` in the checkout.
+- **Registry**: register the app in `util/PatchExecutionTest.kt` (`id`, `packageName` from `Constants.kt`, `candidateFilenames`, `filePattern`, `patchDirectoryPart`). Known divergence: id `xiaomi_earbuds` uses `patchDirectoryPart` `xiaomi` and guide `docs/apps/xiaomi-earbuds.md`.
+- **Extension wiring**: in kveld-extra link companion runtime via `dependsOn(sharedExtensionPatch)` (direct `extendWith` calls cost redundant `ClassMerger` passes); in brave-origin declare `extendWith("extensions/extension.mpe")` per its `AGENTS.md`. Follow the local repo convention.
+- **Universal boundary**: dedicated telemetry suites are a precision superset; never stack a generic telemetry neutralizer on maintained apps. Generic debloat universals (locale/dpi) are unaffected.
+- **Commits**: one atomic Conventional Commit per unit (`feat(<app>):` / `fix(<app>):`), direct commit, never push without explicit request. brave-origin develops on `dev` (`main` is the release line) and requires a green `audit-stack` over `origin/dev..HEAD` before any push.
 
 ## 1. Scope & Non-Goals
 
