@@ -27,6 +27,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Removes promoted posts, trends and ads from timeline. |
 | **Hide Banner** | `bytecodePatch` | `true` (Enabled) | None | Hides new post banner. |
 | **Hide Promote Button** | `bytecodePatch` | `true` (Enabled) | None | Hides promote button under self posts. |
+| **Hide Nudge Button** | `bytecodePatch` | `true` (Enabled) | None | Hides follow/subscribe/follow back buttons on posts. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
 ---
@@ -149,5 +150,8 @@ The bytecode layer suppresses intrusive server-driven prompts, banners, and serv
    - **Hide Promote Button**:
      - Target: Post presentation quick promote eligibility evaluator (`com.x.urt.items.post`), resolved dynamically via indexed strings `x_lite_quick_promote_enabled` and `x_lite_quick_promote_premium_paywall_enabled`.
      - Transformation: Forces method return to `false` (`0`), suppressing self-post promote button rendering (`isQuickPromoteEligible`).
+   - **Hide Nudge Button**:
+     - Target: `FocalPostState` constructor (`com.x.urt.items.post`), resolved dynamically via indexed string `FocalPostState(timelinePostState=`.
+     - Transformation: Neutralizes constructor instructions by zeroing `followButtonState` (`null`), `isSubscribeEligible` (`false`), and stateful follow flags before field assignment, suppressing post follow/subscribe/follow back button rendering.
 
 Known layout limitation: on the APKM distribution all native code ships in APK splits, which the patcher passes through sign-only, so X Crash Native Slimmer logs a skip on this target and frees 0 bytes; it activates on standalone-APK layouts carrying bundled libs.
