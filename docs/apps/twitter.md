@@ -24,6 +24,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `X Telemetry Manifest Purge` | Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers. |
 | **X Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips tracking and advertising permissions, disables measurement services and receivers, and injects opt-out metadata in `AndroidManifest.xml`. |
 | **Remove Premium Upsell** | `bytecodePatch` | `true` (Enabled) | None | Removes premium upsell surfaces. |
+| **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Removes promoted posts, trends and ads from timeline. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
 ---
@@ -111,5 +112,23 @@ The bytecode patch removes client-side premium upsell surfaces in navigation and
    - Emits structured diagnostic messages prefixed with `[Remove Premium Upsell]`.
    - Reports dynamic hook mutation counts without loop spam (`Applied $patched hooks -> premium upsell surfaces suppressed.`).
    - Guarantees zero zombie mismatches via strict runtime validation on flag evaluation resolution.
+
+### D. Layer 4: Timeline Ads Suppression Layer (`bytecodePatch`)
+
+The bytecode patch removes promoted content from the timeline on the 12.33 native URT stack (`com.x.urt.items`, replacing the removed `JsonTimeline*` mapper layer):
+
+1. **Targeted Entrypoint Hooks**:
+   - `Lcom/x/urt/b;->a(...)`: presenter dispatch for timeline items; filters promoted posts (`k1` with `ef` promoted metadata), promoted trends (`z1` with `sf` metadata), and entry IDs containing `promoted`.
+   - Google SSP init (`googlessp/init`): short-circuits ad SDK initialization to `Boolean.FALSE`.
+   - `Lcom/x/urt/items/post/quickpromote/b;->a(...)`: suppresses the QuickPromote booster surface.
+
+2. **Transformation Strategy**:
+   - Injects an item-type gate at presenter dispatch returning the empty `b0` presenter for promoted items.
+   - Forces ad-init result to false client-side; no network payloads touched.
+
+3. **Telemetry & Zero-Zombie Standard**:
+   - Emits structured diagnostic messages prefixed with `[Remove Ads]`.
+   - Reports dynamic hook mutation counts without loop spam (`Applied $patched hooks -> promoted content and timeline ads suppressed.`).
+   - Guarantees zero zombie mismatches via strict runtime validation on fingerprint resolution.
 
 Known layout limitation: on the APKM distribution all native code ships in APK splits, which the patcher passes through sign-only, so X Crash Native Slimmer logs a skip on this target and frees 0 bytes; it activates on standalone-APK layouts carrying bundled libs.
