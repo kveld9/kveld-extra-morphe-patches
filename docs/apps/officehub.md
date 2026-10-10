@@ -22,9 +22,10 @@ Technical documentation and patch catalog for Microsoft Copilot on Android.
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Copilot Telemetry Manifest Purge` | `Custom Blocked Hosts` (Single-label, credentialed-URL, and IPv6 entries are skipped.) | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions. |
 | **Copilot Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | None | Strips advertising and tracking permissions, disables DataTransport, cross-sell, and HockeyApp components, and injects opt-out metadata in AndroidManifest.xml. |
+| **Bypass Code Transparency** | `bytecodePatch` | `true` (Enabled) | None | None | Skips the code-transparency failure dialog and reports local verification success, unblocking sideloaded installs. |
 | **Disable Login Requirement** | `bytecodePatch` | `true` (Enabled) | None | None | Removes login requirement and FTUX paywall screens. Cloud-backed features still require sign-in server-side. |
 | **Copilot DPI Slimmer** | `resourcePatch` | `false` (Opt-in) | None | `Target screen density` | Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. Non-phone UI mode qualifiers (watch, television, car, vrheadset) are purged from drawable/mipmap resources. WARNING: Displays matching stripped densities will scale preserved assets. |
-| **Copilot Companion Native Slimmer** | `rawResourcePatch` | `false` (Opt-in) | None | None | Strips optional companion native binaries (React Native, Hermes, voice/dictation SDKs, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError; speech stripping breaks voice typing and dictation features. The HockeyApp native exception handler is load-bearing at startup (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and is therefore never stripped. |
+| **Copilot Companion Native Slimmer** | `rawResourcePatch` | `false` (Opt-in) | None | None | Strips optional companion native binaries (React Native, Hermes, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError. The HockeyApp native exception handler (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and voice/dictation SDKs (libofficevoicesdk, libofficevoicetranscriptionsdk; proven dlopen FATAL on boot path) are load-bearing at startup and are therefore never stripped. |
 | **Copilot Junk Cleaner** | `rawResourcePatch` | `false` (Opt-in) | None | None | Purges non-functional build metadata, properties, proto descriptors, and duplicate license notices from APK root and META-INF while strictly protecting runtime assets and signatures. |
 
 ---
@@ -156,8 +157,8 @@ Prunes drawables and mipmaps for unselected screen densities to reduce APK size:
 1. **Copilot Companion Native Slimmer**:
    - Zeroes unneeded companion native binaries in `lib/arm64-v8a` and `lib/armeabi-v7a` via in-situ ELF zeroing (`raf.setLength(0L)`):
      - React Native & Hermes stack: `libhermes.so`, `libreactnative.so`, `libfbjni.so`, `libhermestooling.so`.
-     - Speech & vision SDKs: `libofficevoicesdk.so`, `libofficevoicetranscriptionsdk.so`, `libSlimCV.so`.
-   - **Load-Bearing Exclusions**: `libhockey_exception_handler.so` is proven startup load-bearing (startup crash with `UnsatisfiedLinkError` in `OfficeApplication.onMAMCreate` if zeroed) and is permanently protected from stripping.
+     - Vision SDK: `libSlimCV.so`.
+   - **Load-Bearing Exclusions**: `libhockey_exception_handler.so` (startup crash with `UnsatisfiedLinkError` in `OfficeApplication.onMAMCreate`) and speech SDKs (`libofficevoicesdk.so`, `libofficevoicetranscriptionsdk.so`; proven boot load-bearing `dlopen` FATAL) are permanently protected from stripping.
 
 2. **Copilot Junk Cleaner**:
    - Purges non-functional root junk metadata: `DebugProbesKt.bin`, `stamp-cert-sha256`, `version-control-info.textproto`, `kotlin-tooling-metadata.json`, and `.properties`, `.proto`, `.textproto`, `.version` files.
@@ -177,6 +178,12 @@ Removes mandatory sign-in and first-time user experience (FTUX) paywall screens 
 3. **SSO File Activation Bypass**:
    Intercepts `FileActivationSSOManager.checkAndStartSSOIfRequired` (`checkAndStartSSOIfRequiredFingerprint`), clears try blocks, and returns `false` (`const/4 v0, 0x0`, `return v0`).
 
+### H. Code Transparency Bypass (`bytecodePatch`)
+
+Suppresses the non-cancelable code-transparency failure dialog triggered on sideloaded installs and reports verification success:
+- Intercepts method `B(Context, Lcom/microsoft/office/tsl/b;, Z)V` in `Landroidx/camera/camera2/internal/o1;`, anchored by string `"com.microsoft.android.codetransparencyvalidator"`.
+- Bypasses the `p3 == 0` failure branch (which displays `MAMAlertDialogBuilder` with `transparency_failed_title`), clears try blocks, and invokes `p2.transparencyVerificationSucceeded()` directly to execute the success workflow.
+
 ---
 
 ## 4. Behavioral Hazards Warning
@@ -191,7 +198,7 @@ Users and packagers must observe the following operational constraints before ap
 
 3. **Companion Native Slimmer Crash Hazard & Feature Loss**:
    - Hermes and React Native binaries (`libhermes.so`, `libreactnative.so`, `libfbjni.so`, `libhermestooling.so`) are load-bearing for Copilot React Native surfaces. Enabling `Copilot Companion Native Slimmer` WILL crash the application with `UnsatisfiedLinkError` when Copilot chat surfaces are initialized.
-   - Speech SDK binaries (`libofficevoicesdk.so`, `libofficevoicetranscriptionsdk.so`) are required for speech processing; stripping them disables voice typing and dictation features.
+   - Speech SDK binaries (`libofficevoicesdk.so`, `libofficevoicetranscriptionsdk.so`) are startup load-bearing on the continued boot path (proven dlopen FATAL) and are permanently excluded from stripping.
    - The native HockeyApp exception handler (`libhockey_exception_handler.so`) is verified startup load-bearing (`OfficeApplication.onMAMCreate`) and is intentionally never stripped to prevent startup crashes.
 
 4. **Mandatory Backup & Verification**:
