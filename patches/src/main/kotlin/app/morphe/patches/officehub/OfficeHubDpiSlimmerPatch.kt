@@ -10,7 +10,7 @@ import org.w3c.dom.Element
 @Suppress("unused")
 val officeHubDpiSlimmerPatch = resourcePatch(
     name = "Copilot DPI Slimmer",
-    description = "Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. WARNING: Displays matching stripped densities will scale preserved assets.",
+    description = "Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. Non-phone UI mode qualifiers (watch, television, car, vrheadset) are purged from drawable/mipmap resources. WARNING: Displays matching stripped densities will scale preserved assets.",
     default = false,
 ) {
     compatibleWith(Constants.COMPATIBILITY_OFFICEHUB)
@@ -71,7 +71,9 @@ private data class DpiPruneResult(val prunedFiles: Int, val prunedDirs: Int, val
 
 private fun normalizeTargetDpi(rawInput: String?): String {
     val clean = (rawInput ?: "").trim().lowercase().removePrefix("drawable-").removePrefix("mipmap-")
-    return if (clean in KNOWN_DPI_QUALIFIERS) clean else "xxhdpi"
+    if (clean in KNOWN_DPI_QUALIFIERS) return clean
+    println("[Copilot DPI Slimmer] Warning: Unknown target density '$rawInput', defaulting to xxhdpi.")
+    return "xxhdpi"
 }
 
 private fun resolveProtectedIcons(manifestFile: File): Set<String> {
@@ -155,6 +157,7 @@ private fun pruneSingleDpiSubDir(
 }
 
 private fun shouldPurgeNonPhoneDir(dir: File): Boolean {
+    if (!dir.name.startsWith("drawable") && !dir.name.startsWith("mipmap")) return false
     if (dir.name.startsWith("values")) return false
     val qualifiers = dir.name.split("-").drop(1).map { it.lowercase() }
     return qualifiers.any { it in NON_PHONE_UI_MODES }
