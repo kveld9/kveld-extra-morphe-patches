@@ -23,6 +23,7 @@ Technical documentation and patch catalog for Lightroom on Android.
 | :--- | :--- | :--- | :--- | :--- |
 | **Unlock Premium Features** | `bytecodePatch` | `true` (Enabled) | None | Activates internal Limited-Time Premium Unlock (LTPU) gate to bypass subscription requirements. |
 | **Lightroom Background Sync** | `resourcePatch` | `false` (Disabled) | None | Disables WorkManager background sync services, scheduled jobs, and boot receiver. WorkManager startup initializer is preserved for boot stability. |
+| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | Telemetry Manifest Purge (internal) | Neutralizes AppMeasurement and Crashlytics dispatchers, strips ad permissions, injects opt-out flags. Components preserved for boot stability. |
 
 ---
 
