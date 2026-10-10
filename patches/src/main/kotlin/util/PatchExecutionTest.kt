@@ -463,14 +463,23 @@ fun main(args: Array<String>) {
 
     require(apkFile.exists()) { "Target APK not found at: ${apkFile.absolutePath}" }
 
-    val patchFiles = setOf(
-        File("build/libs/").listFiles { file ->
+    fun resolvePatchBundle(): File {
+        val libsDir = File("build/libs/")
+        if (!libsDir.isDirectory) {
+            error("No patch bundle (.mpp) found in build/libs/. Run ./gradlew buildAndroid first, then retry.")
+        }
+        val candidates = libsDir.listFiles { file ->
             val fileName = file.name
             !fileName.contains("javadoc") &&
                     !fileName.contains("sources") &&
                     fileName.endsWith(".mpp")
-        }!!.maxByOrNull { it.lastModified() }!!
-    )
+        } ?: error("No patch bundle (.mpp) found in build/libs/. Run ./gradlew buildAndroid first, then retry.")
+
+        return candidates.maxByOrNull { it.lastModified() }
+            ?: error("No patch bundle (.mpp) found in build/libs/. Run ./gradlew buildAndroid first, then retry.")
+    }
+
+    val patchFiles = setOf(resolvePatchBundle())
     val allPatches = loadPatchesFromJar(patchFiles)
 
     val patchNameFilter = System.getProperty("patchName")?.trim()
