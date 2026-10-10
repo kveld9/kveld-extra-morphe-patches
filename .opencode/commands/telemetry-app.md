@@ -19,7 +19,7 @@ New `agy` conversation: add `Constants` entry inside `object Constants` + `Targe
 
 ### Step 2 — Parallel implementation (TWO AGY workers, exclusive paths)
 Launch both in the same turn (background), max two, never the same files:
-- Worker A (fresh conversation): skill `telemetry-blocking` → `patches/.../<app>/` telemetry patch (manifest purge + verified DEX hooks only, zero zombies, `[Patch Name]` telemetry contract).
+- Worker A (fresh conversation): skill `telemetry-blocking` including the DEX hosts-rewrite pattern and mandatory method-exclusion list -> `patches/.../<app>/` telemetry patch (manifest purge + verified DEX hooks only, zero zombies, `[Patch Name]` telemetry contract).
 - Worker B (fresh conversation): skill `app-debloat` → independent opt-in slimmer patches (one axis per patch, `default=false`).
 - Both: `--add-dir` for project + origin reference repo, no `--dangerously-skip-permissions`, native read/edit only (headless denies RunCommand). Same-scope corrections always resume the same conversation; a failed worker is discarded, never integrated by hand.
 - On `RESOURCE_EXHAUSTED`: checkpoint, rotate via `~/.gemini/config/skills/agy-orchestrator/scripts/switch_account.py auto` (preauthorized), resume same conversation.

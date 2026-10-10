@@ -139,6 +139,8 @@ When the target application bundles native libraries:
    ```
 3. Check for standalone crash reporter or profiler `.so` files suitable for companion bloat zeroing (e.g. `libcrashlytics.so`, `libsentry.so`, `libgwp-asan.so`).
 
+When maintaining native binary host redirections across application updates, enforce a structured native ELF audit contract generalized from single-app scanners. Maintain a catalog of known telemetry endpoints with expected occurrence counts per target ABI (e.g. `arm64-v8a`, `armeabi-v7a`). During an update audit, classify findings into offset-change (the domain string persists but shifted position in `.rodata`), vanished (the string was removed or refactored upstream, requiring hook pruning to avoid false assertion failures), and new-candidate discovery (strings matching domain heuristics such as `*telemetry*`, `*collector*`, `*crash*`, `*metrics*` that emerged in the new build). All ELF audit reports and candidate offset tables must be written to `scratch/` (e.g. `scratch/elf_audit_<app>.txt`) and never committed to version control.
+
 ### G. Bytecode Scan for Stable SDK Signatures
 Scan DEX files with `androguard` to locate stable SDK entrypoints and verify exact Smali descriptors:
 
@@ -192,6 +194,21 @@ After analyzing telemetry, investigate client-side post-patch compatibility bloc
      - **Involuntary Store & Market Redirects**: String constants `market://details?id=`, `play.google.com/store/apps/details`, or store intent builders executed on launch or repackage detection.
      - **Mandatory Login & FTUX Gates**: First-Time User Experience (FTUX) wizards or compulsory login listeners that block offline or standalone utility functions.
      - **Client-Side Paywalls & Local Feature Gates**: Boolean getters (`isPro`, `isPaying`, `isSubscribed`, `hasFamilyPlan`), licensing state enums (`LicensingState`), or local paywall activities (`BlockPaywallActivity`).
+
+### J. Behavioral Privacy Recon Checklist (Non-SDK Hardening)
+Standard telemetry reconnaissance (Exodus signatures, manifest components, and uploader dispatchers) does not discover first-party behavioral tracking or invasive client features that operate outside commercial SDKs. During application onboarding, audit the decompiled application for the following non-SDK privacy hardening candidates:
+- **Sensors & Content-Capture Indicators**: Camera, microphone, and ambient sensor background listeners, motion sensors, screen capture callbacks, or visual content analysis hooks.
+- **In-App Browser Guards**: WebViews that inject custom JavaScript bridges, track external link browsing history, or override third-party cookie/storage isolation.
+- **Share-URL Tracking Parameters**: Outgoing share intent builders that append tracking identifiers (e.g. `utm_*`, `igshid`, `si`, `fbclid`, or custom attribution query parameters) to shared URLs.
+- **Clipboard Access**: Background or unexpected foreground reads from `ClipboardManager` on launch or input focus.
+- **GMS / Phenotype Decoupling Candidates**: Hard couplings to Google Play Services Experiment/Phenotype configuration flags that force remote feature rollouts or telemetry overrides.
+- **Local History Recording**: Internal SQLite/Room databases or SharedPreferences storing local watch, search, browse, or query histories without user consent.
+- **Personalized Search & Feed Algorithms**: Client-side ranking models, behavioral interaction counters, and recommendation logging.
+- **P2P Relay & Mesh Networking**: Background peer-to-peer data sharing, local network discovery (mDNS, SSDP), or distributed caching services.
+- **On-Device AI Governors**: On-device machine learning models indexing local user data, photos, audio, or text for client-side profiling.
+- **Incognito & Private Input Modes**: Keyboard/IME flags, voice typing transmission, or lack of `IME_FLAG_NO_PERSONALIZED_LEARNING` when handling sensitive text fields.
+
+*Scope Invariant*: These behavioral privacy vectors are NOT discovered by the automated Exodus-plus-dispatchers model. Each identified vector represents a separate, dedicated privacy hardening item (often requiring its own independent opt-in patch) and must NEVER be bundled into the primary telemetry suppression patch.
 
 ---
 
@@ -344,6 +361,7 @@ Telemetry blocking and asset debloating implementations are partitioned into ded
   - The zero-zombie fingerprint contract and `[Patch Name]` diagnostic telemetry logging standard.
   - Verification assertions against the compiled APK manifest tree via `aapt2`.
   - Reference: `.agents/skills/telemetry-blocking/SKILL.md`.
+  - DEX hosts-rewrite follows the telemetry-blocking hosts-rewrite pattern, and all stub selections must pass its mandatory exclusion list.
 
 ### B. Application Debloating & Asset Slimming (`app-debloat`)
 - **When to Invoke**: Invoke when analyzing or stripping companion native libraries, non-essential asset bundles, multi-language string tables, high-density screen graphics, onboarding videos, editor assets, or background sync schedulers.

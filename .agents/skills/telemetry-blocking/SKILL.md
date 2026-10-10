@@ -17,7 +17,7 @@ To achieve exhaustive coverage across both commercial SDKs and in-house propriet
    - Manually audit vendor-specific in-house analytics, ad measurement, and telemetry dispatchers (e.g. Microsoft OneDS/Aria/MUTSDK/AdMeasurement, Meta Analytics2, ByteDance AppLog) that are not distributed as third-party SDKs and therefore absent from public tracker catalogs.
 
 ### A. Manifest Inventory
-Audit the decompiled `AndroidManifest.xml` tree to identify tracking entrypoints across five distinct structural categories:
+Audit the decompiled `AndroidManifest.xml` tree to identify tracking entrypoints across six distinct structural categories:
 
 1. **Permissions (`uses-permission`)**:
    - Advertising ID: `com.google.android.gms.permission.AD_ID`
@@ -51,6 +51,14 @@ Audit the decompiled `AndroidManifest.xml` tree to identify tracking entrypoints
 
 5. **Component Discovery Registrars (`<meta-data>`)**:
    - Firebase/DI component discovery: child `<meta-data>` entries inside `com.google.firebase.components.ComponentDiscoveryService` declaring registrars (e.g. `AnalyticsRegistrar`, `CrashlyticsRegistrar`, `PerfRegistrar`).
+
+6. **Extended Component Taxonomy (Universal Telemetry Neutralizer)**:
+   - Device-ID and Cross-App Identity Providers: Content providers exposing persistent hardware/device identifiers, family attribution, and install referrer tokens across sibling apps (`*FDIDLiteProvider`, `*PhoneIdProvider`, `*UsdidValuesProvider`, `*FamilyAppsUserValuesProvider`, `*AttributionIdProvider`, `*InstallReferrerProvider`, `AccessLibraryContentProvider`).
+   - Device-ID and Cross-Signing Services/Receivers: Services and broadcast receivers handling background cross-signing or install referrer fetch routines (`CrossSigningService`, `CrossSigningBroadcastReceiver`, `InstallReferrerFetchJobIntentService`, `PhoneIdRequestReceiver`).
+   - Meta Analytics2 and OneFabric Upload Infrastructure: First-party upload services and alarm receivers orchestrating scheduled telemetry flushes (`FFAlarmUploadJobService`, `OneFabricUploadAlarmReceiver`, `GooglePlayUploadService`, `Analytics2UploadService`, `HighPriUploadRetryReceiver`, `DelayedWorkerService`).
+   - Lacrima Crash Detectors and Dumper Upload Services: Background crash dump uploaders (`DumperUploadService`, `ExceptionsUploadService`, `ProfiloUploadService`) and system event broadcast receivers monitoring device shutdown or lock-screen transitions to detect dirty exits (`ProtectedLockScreenBroadcastReceiver`, `SystemShutdownBootBroadcastReceiver`, `CrashLoop$LastState`).
+   - ML Kit Component Discovery: `MlKitComponentDiscoveryService` and `MlKitInitProvider` (flagged by scanners but subject to the mandatory preservation rule in Section 2.B).
+   - Ad SDK Startup Initializers: `<meta-data>` initializers nested under `androidx.startup.InitializationProvider` that boot ad network SDKs on process launch (`com.unity3d.services.core.configuration.AdsSdkInitializer`, `MobileAdsInitProvider`).
 
 ### B. DEX Scan for Stable SDK Classes
 Inspect DEX bytecodes to locate stable public entrypoints, ad measurement classes, and first-party upload dispatchers:
@@ -86,7 +94,25 @@ Telemetry patches must preserve all functional application systems:
 3. **Core Network Access**:
    - NEVER strip `android.permission.INTERNET` or `android.permission.ACCESS_NETWORK_STATE` in default telemetry patches.
 
-### D. Out of Scope (What is OUT)
+### D. DEX const-string Hosts Rewrite (Hosts-File Driven)
+For tracking domains and telemetry endpoints that cannot be completely neutralized via method-level stubs or where native binary (ELF) editing is out of scope or undesirable, apply a Dalvik bytecode literal rewrite driven by an adblock/hosts blocklist:
+- **Literal Rewriting Mechanism**: Traverse Dalvik instructions across candidate classes and rewrite `const-string` and `const-string/jumbo` URL and hostname literals matching a user-supplied hosts blocklist to a sink IP address (`0.0.0.0` by default).
+- **Subdomain Matching**: Support matching both exact hostnames and subdomains (e.g. an entry for `example.com` matches `analytics.example.com`).
+- **Reserved-Host Exclusions**: Explicitly exclude loopback, local network, and wildcard addresses (`localhost`, `localhost6`, `localhost.localdomain`, `0.0.0.0`, `127.0.0.1`, `::1`) from candidate matching to prevent corrupting local IPC or loopback server bindings.
+- **Large-Blocklist Memory Warning**: Loading blocklists exceeding 100,000 rules incurs high heap memory usage and noticeable patching latency on memory-constrained devices. Emit an explicit diagnostic warning when large lists are parsed.
+- **Architectural Role (Second-Layer Defense)**: Serves as a second layer of defense against commercial offers, tracking endpoints, or dynamic ping targets (e.g. `offers.brave.com`) directly in DEX without requiring ELF string redirection in `libchrome.so` or companion native libraries.
+
+### E. Mandatory SDK Method Exclusions
+When authoring Dalvik bytecode stubs for analytics and telemetry SDKs, never stub methods whose omission or naive replacement inverts tracking state, preserves stale telemetry queues, or breaks application lifecycles. When in doubt about polarity or method side effects, exclude the method from stubbing:
+- **Consent and Direction-Sensitive Setters (Never Stub)**: Never stub consent management or opt-out setters with `return-void`. Calling `setConsent`, `setAdStorage`, `setAnalyticsStorage`, `setAdPersonalization`, `setAdUserData`, `clearConditionalUserProperty`, `resetAnalyticsData`, `setAnalyticsEnabled`, `disableAutoTrack`, or `ignoreView` signals that the user or system is opting out or revoking permissions. Stubbing them with an early return prevents the opt-out signal from propagating and freezes tracking in an enabled state.
+- **Report-Queue Mutators (Never Stub Purges)**: Never stub queue-clearing or collection-disabling routines such as `setCrashlyticsCollectionEnabled` (direction-sensitive) or `deleteUnsentReports` / `clearCachedData`. `deleteUnsentReports` discards pending queued crash reports; stubbing it keeps reports queued on disk for future upload attempts. Only explicit dispatch triggers (such as `sendUnsentReports`) are safe to stub.
+- **Identity Preservers (Never Stub Teardown)**: Never stub identity and session teardown methods (`logout`, `resetAnonymousId`, `removeExposureView`, `remove`). Stubbing identity clearance preserves user identity and tracking state across sessions.
+- **Generic Workers, Lifecycles, and Callbacks (Never Stub)**: Never stub generic asynchronous entrypoints like `run` (generic `Runnable` workers whose class roles are unverified), Android component lifecycles (`onCreate`, `onActivityCreated`, `onActivityStarted`, `onNewIntent` which may govern essential SDK UI or Activity bindings), asynchronous network callbacks (`onResponse`, `onSuccess`, `onFailure` where stubbing stalls retry state machines and exacerbates retry traffic), or synthetic bridge methods (`access$*`).
+- **Functional UI (Never Stub)**: Never stub methods that render interactive dialogs, webviews, or core user flows (`loadUrl`, `showDialog`, `showOpenHeatMapDialog`).
+- **Non-Void Overloads**: Public SDK methods returning non-void types (e.g. `boolean`, integer status codes, or instance references) must not be stubbed with void returns (`return-void`). These methods are outside the scope of void-only early returns; attempting to inject `return-void` causes bytecode verification errors.
+- **Core Rule**: When in doubt about method polarity or runtime necessity, exclude the method from stubbing.
+
+### F. Out of Scope (What is OUT)
 - **Functional Deep Links**: Authentication redirects, universal links, and external app integrations are strictly preserved.
 - **Wearable Companions**: WearOS listeners (e.g. `com.hevy.services.WearListenerService`, `com.meta.wearable.acdc.sdk.service.ACDCRegistrationService`) are disabled only when they function solely as telemetry or unrequested background sync. Functional companion features are left intact unless debloating is requested.
 - **Google Play Billing**: `com.android.billingclient.api.ProxyBillingActivity` and `ProxyBillingActivityV2` must NEVER be removed or disabled. Stripping them triggers `ActivityNotFoundException` during user checkouts.
@@ -280,6 +306,9 @@ Neutralize event dispatchers at Dalvik bytecode level using verified dexlib2 fin
 
 6. **Register Stability**:
    Standard non-range invokes (`invoke-*`) can only reference registers `v0`-`v15`. In methods with high register counts (`.registers 18`), parameter registers `p0`, `p1`, etc., map to high indices (`v16`, `v17`). To pass parameters safely, use `invoke-*/range` or copy high registers into low temporary registers first.
+
+7. **Preference-Gate Filtering (Brave Pattern)**:
+   For applications that route multiple telemetry, diagnostic, and feature flags through a unified preference query method (e.g. `PrefService.e(String key)` returning `boolean`), replacing the entire method with a static `return false` breaks non-telemetry application preferences. Instead, combine a resource patch (`resourcePatch`) that sets `android:defaultValue="false"` on telemetry preference switches in XML layout/preference files with bytecode hooking that wraps every return point using multi-return reverse traversal (as shown in item 4 above). Each return instruction passes the preference key and existing boolean value to a companion runtime extension function (e.g. `Extension.filterTelemetryPref(key, value)`), which selectively forces known telemetry preference keys (such as P3A analytics, usage metrics, or discovery experiments) to `false` while preserving all functional preferences untouched.
 
 ### D. Zero-Zombie Rule (Definitive Gate Invariant)
 - **Zero Fingerprint Mismatches**: Every fingerprint in committed code MUST resolve cleanly against the target APK.
