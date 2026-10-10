@@ -49,8 +49,8 @@ object Constants {
     )
 
     const val TWITTER_PACKAGE_NAME = "com.twitter.android"
-    const val TWITTER_TARGET_VERSION = "12.19.1-release.0"
-    const val TWITTER_INPUT_SHA256 = ""
+    const val TWITTER_TARGET_VERSION = "12.33.0-prod.01"
+    const val TWITTER_INPUT_SHA256 = "553c4e4ae99851d28b376fbd3677e4bb0ce4cdc0839d1c0597263da5eadc25b6"
 
     val COMPATIBILITY_TWITTER = Compatibility(
         name = "X",

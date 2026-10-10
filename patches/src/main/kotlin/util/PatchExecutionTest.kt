@@ -53,7 +53,6 @@ enum class TargetApp(
         appName = "X",
         packageName = Constants.TWITTER_PACKAGE_NAME,
         candidateFilenames = listOf(
-            "com.twitter.android_12.19.1-release.0-312191000_4arch_7dpi_24lang_39a6836c92f41a93acaa05d052b8d62c_apkmirror.com.apkm",
             "twitter_${Constants.TWITTER_TARGET_VERSION}.apkm"
         ),
         filePattern = Regex("(?i).*twitter.*\\.(?:apk|apkm|xapk)$"),

@@ -10,10 +10,10 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | :--- | :--- |
 | **Target App** | X (Twitter) |
 | **Package Name** | `com.twitter.android` |
-| **Target Version** | `12.19.1-release.0` |
+| **Target Version** | `12.33.0-prod.01` |
 | **Target Package Format** | APKM (Split APK Bundle) |
 | **Primary Architecture** | `arm64-v8a` |
-| **Authoritative Source** | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-19-1-release-0-release/) |
+| **Authoritative Source** | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-0-prod-01-release/) |
 
 ---
 
