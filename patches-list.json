@@ -1,7 +1,35 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "patches": [
+    {
+      "name": "Block Telemetry & Trackers",
+      "description": "Neutralizes Google AppMeasurement event dispatchers.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lemon.lvoverseas",
+          "name": "CapCut",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
     {
       "name": "Block Telemetry & Trackers",
       "description": "Neutralizes Facebook Analytics2, DataTransport, FDID/PhoneId providers, and strips AD_ID permissions.",
@@ -20,6 +48,34 @@
           "targets": [
             {
               "version": "447.0.0.55.81",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Block Telemetry & Trackers",
+      "description": "Neutralizes Google AppMeasurement and Firebase Crashlytics dispatchers, strips advertising permissions, and injects analytics opt-out flags.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.adobe.lrmobile",
+          "name": "Lightroom",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#001C34",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "11.6.01",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -141,6 +197,32 @@
       "options": []
     },
     {
+      "name": "Bypass Effects Region Restriction",
+      "description": "Fixes effects, transitions, and templates failing to load (ByteDance Shark WAF block) by spoofing device_platform to 'windows' and resetting deviceId in effect requests.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lemon.lvoverseas",
+          "name": "CapCut",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Disable Login Requirement",
       "description": "Removes login requirement and FTUX paywall screens.",
       "default": true,
@@ -200,6 +282,94 @@
           "required": false,
           "type": "kotlin.String",
           "default": null,
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "Lightroom Background Sync",
+      "description": "Disables WorkManager background sync services, scheduled jobs, and boot receiver. The WorkManager startup initializer is intentionally preserved because removing it prevents application boot. WARNING: Disabling WorkManager can affect background photo uploads, syncing, and exports.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.adobe.lrmobile",
+          "name": "Lightroom",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#001C34",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "11.6.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Lightroom Junk Cleaner",
+      "description": "Purges non-functional build metadata, compiler properties, and duplicate license files from the APK root and META-INF.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.adobe.lrmobile",
+          "name": "Lightroom",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#001C34",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "11.6.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Locale Slimmer",
+      "description": "Strips unselected language string tables, resources, and asset JSON files from the APK. Base fallback and English are always preserved.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lemon.lvoverseas",
+          "name": "CapCut",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "locales",
+          "title": "Locales to keep",
+          "description": "Comma-separated language codes to preserve (e.g. 'en, es, pt, fr, de'). Base fallback and English are always retained.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "en",
           "values": null
         }
       ]
@@ -265,6 +435,42 @@
         }
       ],
       "options": []
+    },
+    {
+      "name": "Native Bloat Slimmer",
+      "description": "Strips non-essential companion native libraries by zeroing bytes in-situ. Always zeroes AppLovin ad crash reporter. WARNING: Stripping speech recognition and synthesis engines (libspeech*.so) disables voice recognition, voiceover captions, and speech-to-text features.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lemon.lvoverseas",
+          "name": "CapCut",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "trimSpeechEngines",
+          "title": "Trim Speech Engines (Breaks Voice Features)",
+          "description": "WARNING: Stripping speech recognition and synthesis engines (libspeechengine.so, libspeechepg.so, libspeechsdk.so) breaks voice effects, text-to-speech, and automatic captions.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": false,
+          "values": null
+        }
+      ]
     },
     {
       "name": "PowerPoint Companion Native Slimmer",
@@ -423,6 +629,42 @@
       "dependencies": [],
       "compatiblePackages": [
         {
+          "packageName": "com.lemon.lvoverseas",
+          "name": "CapCut",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "density",
+          "title": "Target screen density",
+          "description": "Screen density to preserve (e.g. 'xxhdpi', 'xhdpi', 'hdpi', 'mdpi', 'xxxhdpi'). Single-density orphans, launcher icons, and nodpi/anydpi are always protected.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "xxhdpi",
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "Screen Density Slimmer",
+      "description": "Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
           "packageName": "com.tranzmate",
           "name": "Moovit",
           "description": null,
@@ -520,6 +762,58 @@
           "targets": [
             {
               "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock Premium",
+      "description": "Forces CapCut VIP gates to return true (SubscribeImpl, PayVipImpl, UserVipInfo, UserDetailInfo, VipUserServiceImpl, SubscribeCloudImpl). Cloud-gated assets may still fail.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lemon.lvoverseas",
+          "name": "CapCut",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock Premium Features",
+      "description": "Enables app features locked behind subscription paywalls by activating the internal Limited-Time Premium Unlock (LTPU) gate.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.adobe.lrmobile",
+          "name": "Lightroom",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#001C34",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "11.6.01",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,

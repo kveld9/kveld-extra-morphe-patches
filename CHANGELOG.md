@@ -1,3 +1,28 @@
+## [1.5.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.4.0...v1.5.0) (2026-10-10)
+
+### Bug Fixes
+
+* **lrmobile:** backup guidance references APK-only input ([ae00b19](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ae00b19ffbfbb7908fef3ffc57b2a3805636fdbd))
+* **lrmobile:** target PairIP-free APK variant instead of Play APKM bundle ([d4f4693](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d4f469365dd0c329b834d0b1d5e33027ee2571b4))
+
+### New Features
+
+* **capcut:** add block telemetry patch ([3649877](https://github.com/kveld9/kveld-extra-morphe-patches/commit/3649877d8f8a602d1dcdb9761fb890a4112821b9))
+* **capcut:** add bypass effects region restriction patch ([0e188cb](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0e188cb06859b2bb258bc7bca957a33026e674a2))
+* **capcut:** add locale slimmer patch ([40c7d40](https://github.com/kveld9/kveld-extra-morphe-patches/commit/40c7d40d38e89e9f2057306f173669450ac5012f))
+* **capcut:** add native bloat slimmer patch ([93c3309](https://github.com/kveld9/kveld-extra-morphe-patches/commit/93c33096e7b7696d510bfe13e71ac206cc58e935))
+* **capcut:** add screen density slimmer patch ([63fff6c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/63fff6ca32d2dc921b6af1cae5befb606d22e8ed))
+* **capcut:** add unlock premium patch ([76569d8](https://github.com/kveld9/kveld-extra-morphe-patches/commit/76569d81d63f7b3e04ec9915e62e1b2068aa98f5))
+* **lrmobile:** add background sync disabler preserving WorkManager init ([b358131](https://github.com/kveld9/kveld-extra-morphe-patches/commit/b35813158d11dba136efb89ce1dd6d031cda5453))
+* **lrmobile:** add junk cleaner for build metadata ([d781836](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d7818363b1a128911cdd77a9d6a3b1be4c6db7b4))
+* **lrmobile:** add telemetry blocker preserving boot-critical components ([4b67af1](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4b67af180a53602a7cd8ea823cdf225e06b9e3be))
+* **lrmobile:** add unlock premium features patch ([9054c09](https://github.com/kveld9/kveld-extra-morphe-patches/commit/9054c090ae49defac17036e1db15d57b7e7eb31f))
+* **skills:** add client-side post-patch compatibility step and compat-bypass skill ([2a3644d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2a3644dd1f6ad35d938d311605f7b7ccac8a9763))
+
+### Code Refactoring
+
+* **tooling:** collapse README patch spoilers unless EXPANDED ([51b7c33](https://github.com/kveld9/kveld-extra-morphe-patches/commit/51b7c33b50d41b5d4a5bb8d468d7f3408ce71bfa))
+
 ## [1.4.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-09)
 
 ### Bug Fixes
