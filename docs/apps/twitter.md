@@ -29,6 +29,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **Hide Promote Button** | `bytecodePatch` | `true` (Enabled) | None | Hides promote button under self posts. |
 | **Hide Nudge Button** | `bytecodePatch` | `true` (Enabled) | None | Hides follow/subscribe/follow back buttons on posts. |
 | **Hide Recommendation Items** | `bytecodePatch` | `true` (Enabled) | None | Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies. |
+| **Hide Recommended Users** | `bytecodePatch` | `true` (Enabled) | None | Hides recommended users popup shown when following someone. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
 ---
@@ -157,5 +158,8 @@ The bytecode layer suppresses intrusive server-driven prompts, banners, and serv
    - **Hide Recommendation Items**:
      - Target: Timeline presenter dispatch (`Lcom/x/urt/b;->a`), resolving item models implementing `Lcom/x/models/timelines/items/p0;`.
      - Transformation: Intercepts timeline items whose `entryId` contains recommendation identifiers (`who-to-follow`, `who_to_follow`, `who-to-subscribe`, `stories`, `eventsummary`, `toptabsrpusermodule`, `community-to-join`) and returns the empty presenter (`Lcom/x/urt/b0;->a`) to suppress rendering.
+   - **Hide Recommended Users**:
+     - Target: `ProfileFollowRecommendationResponse` constructors (`com.twitter.profile.api`), resolved dynamically via indexed string `ProfileFollowRecommendationResponse(style=`.
+     - Transformation: Neutralizes constructor instructions by zeroing `recommendedUsers` (`null`) before field assignment, preventing follow recommendation models from entering presenter state and suppressing recommended users popup rendering.
 
 Known layout limitation: on the APKM distribution all native code ships in APK splits, which the patcher passes through sign-only, so X Crash Native Slimmer logs a skip on this target and frees 0 bytes; it activates on standalone-APK layouts carrying bundled libs.
