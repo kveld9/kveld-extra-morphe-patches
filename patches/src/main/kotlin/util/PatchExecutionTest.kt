@@ -24,6 +24,7 @@ enum class TargetApp(
     val candidateFilenames: List<String>,
     val filePattern: Regex,
     val patchDirectoryPart: String,
+    val referenceSha256: String = "",
 ) {
     // Register one entry per target app, e.g.:
     // EXAMPLE(
@@ -33,6 +34,7 @@ enum class TargetApp(
     //     candidateFilenames = listOf("example_${Constants.EXAMPLE_TARGET_VERSION}.apk"),
     //     filePattern = Regex("(?i).*example.*\\.(?:apk|apkm|xapk)$"),
     //     patchDirectoryPart = "example",
+    //     referenceSha256 = Constants.EXAMPLE_INPUT_SHA256,
     // ),
     INSTAGRAM(
         id = "instagram",
@@ -44,6 +46,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*instagram.*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "instagram",
+        referenceSha256 = Constants.INSTAGRAM_INPUT_SHA256,
     ),
     TWITTER(
         id = "twitter",
@@ -55,6 +58,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*twitter.*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "twitter",
+        referenceSha256 = Constants.TWITTER_INPUT_SHA256,
     ),
     MOOVIT(
         id = "moovit",
@@ -66,6 +70,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*(?:moovit|tranzmate).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "moovit",
+        referenceSha256 = Constants.MOOVIT_INPUT_SHA256,
     ),
     POWERPOINT(
         id = "powerpoint",
@@ -77,6 +82,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*powerpoint.*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "powerpoint",
+        referenceSha256 = Constants.POWERPOINT_INPUT_SHA256,
     ),
     LRMOBILE(
         id = "lrmobile",
@@ -87,6 +93,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*(?:lrmobile|lightroom).*\\.apk$"),
         patchDirectoryPart = "lrmobile",
+        referenceSha256 = Constants.LRMOBILE_INPUT_SHA256,
     ),
     CAPCUT(
         id = "capcut",
@@ -98,6 +105,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*(?:capcut|lemon\\.lvoverseas).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "capcut",
+        referenceSha256 = Constants.CAPCUT_INPUT_SHA256,
     ),
     OFFICEHUB(
         id = "officehub",
@@ -109,6 +117,7 @@ enum class TargetApp(
         ),
         filePattern = Regex("(?i).*(?:officehub|copilot).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "officehub",
+        referenceSha256 = Constants.OFFICEHUB_INPUT_SHA256,
     ),
     ;
 
@@ -387,6 +396,28 @@ private fun verifyInputVersion(
     error("Input APK ${inputFile.name} version '$versionName' does not match expected target version(s) $expectedVersions. Pass -Papk=<path to the target version> or -PallowVersionMismatch=true for differential runs on other versions.")
 }
 
+private fun verifyInputDigest(
+    patcher: Patcher,
+    targetApp: TargetApp,
+    inputFile: File,
+) {
+    if (targetApp.referenceSha256.isEmpty()) return
+
+    val actualSha256 = sha256Hex(inputFile.readBytes())
+    if (actualSha256.equals(targetApp.referenceSha256, ignoreCase = true)) {
+        println("[INFO] Input digest matches reference.")
+        return
+    }
+
+    val mismatchDetail = "Input digest mismatch: expected ${targetApp.referenceSha256} actual $actualSha256 (${inputFile.name}). Pass -Papk=<correct file> or -PallowVersionMismatch=true for differential runs on other versions."
+    println("[WARN] $mismatchDetail")
+
+    if (System.getProperty("apkDigestEnforce").toBoolean()) {
+        patcher.close()
+        error(mismatchDetail)
+    }
+}
+
 fun main(args: Array<String>) {
     val userHome = System.getProperty("user.home") ?: "."
     val searchDirs = getSearchDirectories(userHome)
@@ -586,6 +617,7 @@ fun main(args: Array<String>) {
     println("\n[INIT] Initializing Morphe Patcher engine...")
     val patcher = Patcher(config)
     verifyInputVersion(patcher, targetPatches, targetApp, effectiveApkFile)
+    verifyInputDigest(patcher, targetApp, effectiveApkFile)
     patcher += targetPatches
 
     println("[EXEC] Executing patch pipeline on ${effectiveApkFile.name} (target: ${targetApp.appName})...")

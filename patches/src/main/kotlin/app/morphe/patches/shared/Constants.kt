@@ -14,6 +14,7 @@ import app.morphe.patcher.patch.Compatibility
  * ```
  * const val EXAMPLE_PACKAGE_NAME = "com.example.app"
  * const val EXAMPLE_TARGET_VERSION = "1.0.0"
+ * const val EXAMPLE_INPUT_SHA256 = ""
  *
  * val COMPATIBILITY_EXAMPLE = Compatibility(
  *     name = "Example",
@@ -32,6 +33,7 @@ import app.morphe.patcher.patch.Compatibility
 object Constants {
     const val INSTAGRAM_PACKAGE_NAME = "com.instagram.android"
     const val INSTAGRAM_TARGET_VERSION = "447.0.0.55.81"
+    const val INSTAGRAM_INPUT_SHA256 = "b3075e2bb88b14ced55399b825b884b5d90c9945096833fbb0e4a2befd16ebad"
 
     val COMPATIBILITY_INSTAGRAM = Compatibility(
         name = "Instagram",
@@ -48,6 +50,7 @@ object Constants {
 
     const val TWITTER_PACKAGE_NAME = "com.twitter.android"
     const val TWITTER_TARGET_VERSION = "12.19.1-release.0"
+    const val TWITTER_INPUT_SHA256 = ""
 
     val COMPATIBILITY_TWITTER = Compatibility(
         name = "X",
@@ -64,6 +67,7 @@ object Constants {
 
     const val MOOVIT_PACKAGE_NAME = "com.tranzmate"
     const val MOOVIT_TARGET_VERSION = "5.201.1.1809"
+    const val MOOVIT_INPUT_SHA256 = "135e7a1964dd71395e6e2f00625d555d9efddb6c1d0b320dffd6f0bb12e4863d"
 
     val COMPATIBILITY_MOOVIT = Compatibility(
         name = "Moovit",
@@ -80,6 +84,7 @@ object Constants {
 
     const val POWERPOINT_PACKAGE_NAME = "com.microsoft.office.powerpoint"
     const val POWERPOINT_TARGET_VERSION = "16.0.20527.20034"
+    const val POWERPOINT_INPUT_SHA256 = "e9379a409f0cc72ee0815c23a50852248384e0c65b2f83bcdc8748760456b937"
 
     val COMPATIBILITY_POWERPOINT = Compatibility(
         name = "PowerPoint",
@@ -96,6 +101,7 @@ object Constants {
 
     const val LRMOBILE_PACKAGE_NAME = "com.adobe.lrmobile"
     const val LRMOBILE_TARGET_VERSION = "11.6.01"
+    const val LRMOBILE_INPUT_SHA256 = "019620c4b558de549ae2b91536572b2f5fdd5b962eaca6b5319e7f81b7d4873a"
 
     val COMPATIBILITY_LRMOBILE = Compatibility(
         name = "Lightroom",
@@ -112,6 +118,7 @@ object Constants {
 
     const val CAPCUT_PACKAGE_NAME = "com.lemon.lvoverseas"
     const val CAPCUT_TARGET_VERSION = "19.7.0"
+    const val CAPCUT_INPUT_SHA256 = "b12e11cd13311b85000d0de330a7bdda245151958c01fc5316b8c42c3d0f3cdd"
 
     val COMPATIBILITY_CAPCUT = Compatibility(
         name = "CapCut",
@@ -128,6 +135,7 @@ object Constants {
 
     const val OFFICEHUB_PACKAGE_NAME = "com.microsoft.office.officehubrow"
     const val OFFICEHUB_TARGET_VERSION = "16.0.20527.20022"
+    const val OFFICEHUB_INPUT_SHA256 = ""
 
     val COMPATIBILITY_OFFICEHUB = Compatibility(
         name = "Copilot",
