@@ -25,6 +25,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **X Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips tracking and advertising permissions, disables measurement services and receivers, and injects opt-out metadata in `AndroidManifest.xml`. |
 | **Remove Premium Upsell** | `bytecodePatch` | `true` (Enabled) | None | Removes premium upsell surfaces. |
 | **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Removes promoted posts, trends and ads from timeline. |
+| **Hide Banner** | `bytecodePatch` | `true` (Enabled) | None | Hides new post banner. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
 ---
@@ -130,5 +131,19 @@ The bytecode patch removes promoted content from the timeline on the 12.33 nativ
    - Emits structured diagnostic messages prefixed with `[Remove Ads]`.
    - Reports dynamic hook mutation counts without loop spam (`Applied $patched hooks -> promoted content and timeline ads suppressed.`).
    - Guarantees zero zombie mismatches via strict runtime validation on fingerprint resolution.
+
+### E. Layer 5: Served-Content Debloat (`bytecodePatch`)
+
+The bytecode layer suppresses intrusive server-driven prompts, banners, and served content overlays at the client presentation boundary:
+
+1. **Strategy & Telemetry Standards**:
+   - Anchors obfuscated instruction models dynamically via unique string literals without APK-wide method scanning.
+   - Neutralizes presentation state models at instantiation time to short-circuit downstream Jetpack Compose rendering trees cleanly.
+   - Structured telemetry prefixed with `[<Patch Name>]` reports exact mutation counts under a zero-zombie policy (`error()` on unresolved targets).
+
+2. **Suppressed Surfaces**:
+   - **Hide Banner**:
+     - Target: `UrtShowInstructionsState` constructor (`com.x.urt.instructions`), resolved dynamically via indexed string `UrtShowInstructionsState(showInstructions=`.
+     - Transformation: Neutralizes constructor instructions by replacing `showInstructions` with `Collections.emptyList()` and zeroing all eligibility/visibility flags (`isEligibleToShowPill`, `isReadyToShow`, `isPillCurrentlyVisible`).
 
 Known layout limitation: on the APKM distribution all native code ships in APK splits, which the patcher passes through sign-only, so X Crash Native Slimmer logs a skip on this target and frees 0 bytes; it activates on standalone-APK layouts carrying bundled libs.
