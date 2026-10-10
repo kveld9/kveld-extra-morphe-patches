@@ -67,14 +67,8 @@ val twitterRemoveAdsPatch = bytecodePatch(
                 goto :cond_continue
 
                 :cond_check_item
-                instance-of v1, v0, Lcom/x/models/timelines/items/q1;
-                if-eqz v1, :cond_suppress_ad
-
-                instance-of v1, v0, Lcom/x/models/timelines/items/q0;
-                if-eqz v1, :cond_suppress_ad
-
                 instance-of v1, v0, Lcom/x/models/timelines/items/k1;
-                if-eqz v1, :cond_check_post
+                if-nez v1, :cond_check_post
                 goto :cond_not_post
 
                 :cond_check_post
@@ -82,11 +76,11 @@ val twitterRemoveAdsPatch = bytecodePatch(
                 check-cast v1, Lcom/x/models/timelines/items/k1;
                 invoke-virtual {v1}, Lcom/x/models/timelines/items/k1;->y()Lcom/x/models/ef;
                 move-result-object v1
-                if-eqz v1, :cond_suppress_ad
+                if-nez v1, :cond_suppress_ad
 
                 :cond_not_post
                 instance-of v1, v0, Lcom/x/models/timelines/items/z1;
-                if-eqz v1, :cond_check_trend
+                if-nez v1, :cond_check_trend
                 goto :cond_not_trend
 
                 :cond_check_trend
@@ -99,19 +93,18 @@ val twitterRemoveAdsPatch = bytecodePatch(
                 :cond_check_sf
                 invoke-virtual {v1}, Lcom/x/models/sf;->b()Lcom/x/models/ef;
                 move-result-object v1
-                if-eqz v1, :cond_suppress_ad
+                if-nez v1, :cond_suppress_ad
 
                 :cond_not_trend
                 invoke-interface {v0}, Lcom/x/models/timelines/items/p0;->c()Ljava/lang/String;
                 move-result-object v1
-                if-eqz v1, :cond_check_entry_id
-                goto :cond_continue
+                if-eqz v1, :cond_continue
 
                 :cond_check_entry_id
                 const-string v2, "promoted"
                 invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                 move-result v1
-                if-eqz v1, :cond_suppress_ad
+                if-nez v1, :cond_suppress_ad
                 goto :cond_continue
 
                 :cond_suppress_ad
