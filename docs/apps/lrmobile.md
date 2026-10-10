@@ -30,7 +30,7 @@ Technical documentation and patch catalog for Lightroom on Android.
 
 ## 3. Deep Technical Breakdown
 
-Technical breakdown is pending patch implementation.
+See the Applied Patches Catalog above: each entry documents its typology, default state, dependencies, and boot-stability constraints verified on-device.
 
 ---
 
