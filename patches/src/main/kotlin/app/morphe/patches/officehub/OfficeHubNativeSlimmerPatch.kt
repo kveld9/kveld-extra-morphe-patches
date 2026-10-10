@@ -9,7 +9,7 @@ import java.io.RandomAccessFile
 @Suppress("unused")
 val officeHubNativeSlimmerPatch = rawResourcePatch(
     name = "Copilot Companion Native Slimmer",
-    description = "Strips optional companion native binaries (React Native, Hermes, voice/dictation SDKs, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError; speech stripping breaks voice typing and dictation features. The HockeyApp native exception handler is load-bearing at startup (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and is therefore never stripped.",
+    description = "Strips optional companion native binaries (React Native, Hermes, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError. The HockeyApp native exception handler (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and voice/dictation SDKs (libofficevoicesdk, libofficevoicetranscriptionsdk; proven dlopen FATAL on boot path) are load-bearing at startup and are therefore never stripped.",
     default = false,
 ) {
     compatibleWith(Constants.COMPATIBILITY_OFFICEHUB)
@@ -40,8 +40,6 @@ private val TARGET_ABIS = listOf("lib/arm64-v8a", "lib/armeabi-v7a")
 private val COMPANION_SO_NAMES = listOf(
     "libhermes.so",
     "libreactnative.so",
-    "libofficevoicesdk.so",
-    "libofficevoicetranscriptionsdk.so",
     "libSlimCV.so",
     "libhermestooling.so",
     "libfbjni.so",
