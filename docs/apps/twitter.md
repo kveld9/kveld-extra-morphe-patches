@@ -23,6 +23,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | :--- | :--- | :--- | :--- | :--- |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `X Telemetry Manifest Purge` | Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers. |
 | **X Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips tracking and advertising permissions, disables measurement services and receivers, and injects opt-out metadata in `AndroidManifest.xml`. |
+| **Remove Premium Upsell** | `bytecodePatch` | `true` (Enabled) | None | Removes premium upsell surfaces. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
 ---
@@ -92,5 +93,23 @@ The Dalvik bytecode layer neutralizes SDK event submission pipelines at executio
    - Emits structured diagnostic messages prefixed with `[X Telemetry]`.
    - Reports dynamic hook mutation counts without loop spam.
    - Follows zero-zombie verification to ensure all hooks cleanly resolve or prune on target updates.
+
+### C. Layer 3: Premium Upsell Neutralization Layer (`bytecodePatch`)
+
+The bytecode patch removes client-side premium upsell surfaces in navigation and composer/upload flows:
+
+1. **Targeted Entrypoint Hooks**:
+   - `subscriptions_upsells_premium_home_nav_enabled`: gates premium upsell surfaces in media and composer upload flows (`com.x.composer.upload.v2.ui`).
+   - `subscriptions_upsells_premium_home_nav_offer_enabled`: gates premium upsell tab and promotional offer surfaces in home navigation tabbed layouts (`com.x.home.tabbed`).
+
+2. **Transformation Strategy**:
+   - Locates feature switch check call sites via indexed string literal references.
+   - Neutralizes boolean evaluation results dynamically (forces return register to `0` / `false` or boxed `Boolean.FALSE`), short-circuiting upsell gating branches at client level.
+   - Preserves standard navigation tabs and upload pipelines without server communication interference.
+
+3. **Telemetry & Zero-Zombie Standard**:
+   - Emits structured diagnostic messages prefixed with `[Remove Premium Upsell]`.
+   - Reports dynamic hook mutation counts without loop spam (`Applied $patched hooks -> premium upsell surfaces suppressed.`).
+   - Guarantees zero zombie mismatches via strict runtime validation on flag evaluation resolution.
 
 Known layout limitation: on the APKM distribution all native code ships in APK splits, which the patcher passes through sign-only, so X Crash Native Slimmer logs a skip on this target and frees 0 bytes; it activates on standalone-APK layouts carrying bundled libs.
