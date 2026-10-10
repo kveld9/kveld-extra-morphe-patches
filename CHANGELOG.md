@@ -1,3 +1,39 @@
+## [1.6.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.5.0...v1.6.0) (2026-10-10)
+
+### Bug Fixes
+
+* **officehub:** exclude boot load-bearing voice libs from native slimmer ([4dc4e19](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4dc4e192bf0fb2449953361e1f8fbffab9c1c5fd))
+* **officehub:** normalize custom hosts and scope user rewrite pass ([5e75120](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5e7512040e48fe86abc96a60d250a454c4aa976c))
+* **officehub:** persist transparency success timestamp in bypass ([3ded264](https://github.com/kveld9/kveld-extra-morphe-patches/commit/3ded264c6d7ff0eba627b0d5c6515e83e3e57d1b))
+* **officehub:** validate custom host rules and fix rewrite accounting ([929883e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/929883e8207585c3d66b96c4f4bfde977a43a3c9))
+* **officehub:** warn on unknown DPI and scope non-phone purge ([2fff6dd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2fff6dde3d9d869b89212ff039c76ef28da0695b))
+* **patches:** fail fast with actionable error when .mpp bundle is missing ([6634574](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6634574ff56d262f58735d6a044206adaf35781d))
+* **tooling:** recognize renamed kveld-morphe-patches layout in skill sync ([5aaee2e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5aaee2e4a74b5900e0846186293c99f90e43ef35))
+* **twitter:** correct inverted filter branches in remove ads ([d34eb52](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d34eb523d93b60d737ae4099038f6e4a2d0e4010))
+
+### New Features
+
+* **officehub:** add code transparency dialog bypass ([118780f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/118780f548dc2c4ca59600b8fae1cbd26e46694f))
+* **officehub:** add companion native slimmer with startup-safe exclusions ([8363526](https://github.com/kveld9/kveld-extra-morphe-patches/commit/836352606c8183cc70cf7a61813a107246deb76f))
+* **officehub:** add Copilot target with telemetry blocking ([64ce08f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/64ce08f48ca362f6c882a4e35f9f22c6d070d8c0))
+* **officehub:** add DPI slimmer for unselected densities ([41c8e56](https://github.com/kveld9/kveld-extra-morphe-patches/commit/41c8e56986b1f9a16184d5079bc219c95d4457c9))
+* **officehub:** add junk cleaner for build metadata ([4b0d97f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4b0d97f7e23b65bc19ff0ee88df80cc802e1dc38))
+* **officehub:** add login requirement disabler for FTUX and SSO ([8b8ce73](https://github.com/kveld9/kveld-extra-morphe-patches/commit/8b8ce73f9b7b868b6a8467468984c6becb87f197))
+* **patches:** add warn-by-default input digest admission ([c124ff7](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c124ff7ea0cfe024dd7936ea43b9f861fc351f68))
+* **tooling:** extend doctor with JDK compiler and build-tools checks ([6e539c4](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6e539c4c0fc383462c19ae1911edb528c5c8f57e))
+* **twitter:** add hide banner patch ([a11925d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a11925dd265f31accfa5cbf7a9cc5c3bc6801b48))
+* **twitter:** add hide live threads patch ([7193961](https://github.com/kveld9/kveld-extra-morphe-patches/commit/71939610a0e043bc9d63699b06f7961a4dee747a))
+* **twitter:** add hide nudge button patch ([5b70619](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5b706190021f6369cd33e7c3096df91b56339d01))
+* **twitter:** add hide promote button patch ([d27e9ac](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d27e9ac956da3494f548f33913a746b4cb592753))
+* **twitter:** add hide recommendation items patch ([fe9dc15](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fe9dc157599666e19d92a3eeb4dd2cdc8f57e182))
+* **twitter:** add hide recommended users patch ([6486c86](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6486c86ddf6d1b1ba4388d941ecf4da53377e17f))
+* **twitter:** add no shortened url patch ([f1d7885](https://github.com/kveld9/kveld-extra-morphe-patches/commit/f1d78854625117d8194ff9b3d3f0b8e016f561a5))
+* **twitter:** add pause search suggestions patch ([ad12061](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ad120618bf40259d47f6cbfbe7595691f9b79a76))
+* **twitter:** add remove ads patch ([674b793](https://github.com/kveld9/kveld-extra-morphe-patches/commit/674b7934df81c1b1f67f670fa598133c72195368))
+* **twitter:** add remove premium upsell patch ([a0b23a0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a0b23a09a0a6759a44f935d4bf7401b82cce602f))
+* **twitter:** bump target to 12.33.0-prod.01 ([dc4c609](https://github.com/kveld9/kveld-extra-morphe-patches/commit/dc4c6098bdb7f51f1704f29e830ca9cb46d93db8))
+* **twitter:** neutralize firebase performance trace dispatchers ([7dd3aaf](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7dd3aafc8c03f625066d4b78cc4922a0687f8e67))
+
 ## [1.5.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.4.0...v1.5.0) (2026-10-10)
 
 ### Bug Fixes

@@ -120,6 +120,26 @@
 </details>
 
 <details>
+<summary>Copilot&nbsp;&nbsp;•&nbsp;&nbsp;<b>6 patches</b></summary>
+<br>
+
+**Supported versions:**
+
+| 16.0.20527.20022 |
+| :---: |
+
+| Patch | Description | Options |
+|----------|----------------|-----------|
+| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions. | • Custom Blocked Hosts |
+| **Bypass Code Transparency** | Skips the code-transparency failure dialog and reports local verification success, unblocking sideloaded installs. |  |
+| **Copilot Companion Native Slimmer** | Strips optional companion native binaries (React Native, Hermes, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError. The HockeyApp native exception handler (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and voice/dictation SDKs (libofficevoicesdk, libofficevoicetranscriptionsdk; proven dlopen FATAL on boot path) are load-bearing at startup and are therefore never stripped. |  |
+| **Copilot DPI Slimmer** | Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. Non-phone UI mode qualifiers (watch, television, car, vrheadset) are purged from drawable/mipmap resources. WARNING: Displays matching stripped densities will scale preserved assets. | • Target screen density |
+| **Copilot Junk Cleaner** | Purges non-functional build metadata, properties, proto descriptors, and duplicate license notices from APK root and META-INF while strictly protecting runtime assets and signatures. |  |
+| **Disable Login Requirement** | Removes login requirement and FTUX paywall screens. Cloud-backed features still require sign-in server-side. |  |
+
+</details>
+
+<details>
 <summary>PowerPoint&nbsp;&nbsp;•&nbsp;&nbsp;<b>8 patches</b></summary>
 <br>
 
@@ -142,17 +162,27 @@
 </details>
 
 <details>
-<summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>2 patches</b></summary>
+<summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>12 patches</b></summary>
 <br>
 
 **Supported versions:**
 
-| 12.19.1-release.0 |
+| 12.33.0-prod.01 |
 | :---: |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers. |  |
+| **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement and Firebase Performance Trace dispatchers, and strips advertising identifiers. |  |
+| **Hide Banner** | Hides new post banner |  |
+| **Hide Live Threads** | Hides live threads |  |
+| **Hide Nudge Button** | Hides follow/subscribe/follow back buttons on posts |  |
+| **Hide Promote Button** | Hides promote button under self posts |  |
+| **Hide Recommendation Items** | Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies |  |
+| **Hide Recommended Users** | Hides recommended users popup shown when following someone |  |
+| **No Shortened URL** | Expands t.co shortened URLs, removing the click-tracking intermediary |  |
+| **Pause Search Suggestions** | Stops persisting search suggestions locally without breaking search |  |
+| **Remove Ads** | Removes promoted posts, trends and ads from timeline |  |
+| **Remove Premium Upsell** | Removes premium upsell surfaces |  |
 | **X MLKit Vision Slimmer** | Disables MLKit component discovery and registrars. WARNING: this breaks in-app QR and barcode scanning. |  |
 
 </details>

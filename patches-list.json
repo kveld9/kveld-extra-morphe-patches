@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "patches": [
     {
       "name": "Block Telemetry & Trackers",
@@ -116,6 +116,44 @@
     },
     {
       "name": "Block Telemetry & Trackers",
+      "description": "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising permissions.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.officehubrow",
+          "name": "Copilot",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#109CF0",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20022",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "custom-blocked-hosts",
+          "title": "Custom Blocked Hosts",
+          "description": "Comma-separated list of additional telemetry hostnames or domains to redirect to 0.0.0.0. Single-label, credentialed-URL, and IPv6 entries are skipped.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": null,
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "Block Telemetry & Trackers",
       "description": "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp activities and DataTransport components, and strips advertising permissions.",
       "default": true,
       "dependencies": [
@@ -144,7 +182,7 @@
     },
     {
       "name": "Block Telemetry & Trackers",
-      "description": "Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers.",
+      "description": "Neutralizes Google AppMeasurement and Firebase Performance Trace dispatchers, and strips advertising identifiers.",
       "default": true,
       "dependencies": [
         "ResourcePatch"
@@ -159,7 +197,33 @@
           "signatures": null,
           "targets": [
             {
-              "version": "12.19.1-release.0",
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Bypass Code Transparency",
+      "description": "Skips the code-transparency failure dialog and reports local verification success, unblocking sideloaded installs.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.officehubrow",
+          "name": "Copilot",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#109CF0",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20022",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -212,6 +276,120 @@
           "targets": [
             {
               "version": "19.7.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Copilot Companion Native Slimmer",
+      "description": "Strips optional companion native binaries (React Native, Hermes, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError. The HockeyApp native exception handler (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and voice/dictation SDKs (libofficevoicesdk, libofficevoicetranscriptionsdk; proven dlopen FATAL on boot path) are load-bearing at startup and are therefore never stripped.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.officehubrow",
+          "name": "Copilot",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#109CF0",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20022",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Copilot DPI Slimmer",
+      "description": "Strips drawables for unselected screen densities from Copilot base APK while preserving launcher icons and single-density assets. Non-phone UI mode qualifiers (watch, television, car, vrheadset) are purged from drawable/mipmap resources. WARNING: Displays matching stripped densities will scale preserved assets.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.officehubrow",
+          "name": "Copilot",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#109CF0",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20022",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "dpi",
+          "title": "Target screen density",
+          "description": "Screen density to preserve (ldpi, mdpi, tvdpi, hdpi, xhdpi, xxhdpi, xxxhdpi). Default is xxhdpi.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "xxhdpi",
+          "values": null
+        }
+      ]
+    },
+    {
+      "name": "Copilot Junk Cleaner",
+      "description": "Purges non-functional build metadata, properties, proto descriptors, and duplicate license notices from APK root and META-INF while strictly protecting runtime assets and signatures.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.officehubrow",
+          "name": "Copilot",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#109CF0",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20022",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Disable Login Requirement",
+      "description": "Removes login requirement and FTUX paywall screens. Cloud-backed features still require sign-in server-side.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.microsoft.office.officehubrow",
+          "name": "Copilot",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#109CF0",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "16.0.20527.20022",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -285,6 +463,162 @@
           "values": null
         }
       ]
+    },
+    {
+      "name": "Hide Banner",
+      "description": "Hides new post banner",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide Live Threads",
+      "description": "Hides live threads",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide Nudge Button",
+      "description": "Hides follow/subscribe/follow back buttons on posts",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide Promote Button",
+      "description": "Hides promote button under self posts",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide Recommendation Items",
+      "description": "Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Hide Recommended Users",
+      "description": "Hides recommended users popup shown when following someone",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
     },
     {
       "name": "Lightroom Background Sync",
@@ -473,6 +807,58 @@
       ]
     },
     {
+      "name": "No Shortened URL",
+      "description": "Expands t.co shortened URLs, removing the click-tracking intermediary",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Pause Search Suggestions",
+      "description": "Stops persisting search suggestions locally without breaking search",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "PowerPoint Companion Native Slimmer",
       "description": "Strips optional companion native binaries (React Native and Hermes JavaScript runtime stack) via in-situ zeroing. WARNING: stripped libraries are load-bearing for React Native initialization - enabling this WILL crash the app with UnsatisfiedLinkError when Copilot or other React Native surfaces start, not merely hide those features.",
       "default": false,
@@ -586,6 +972,58 @@
           "targets": [
             {
               "version": "5.201.1.1809",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Remove Ads",
+      "description": "Removes promoted posts, trends and ads from timeline",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Remove Premium Upsell",
+      "description": "Removes premium upsell surfaces",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.twitter.android",
+          "name": "X",
+          "description": null,
+          "apkFileType": "APKM",
+          "appIconColor": "#000000",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "12.33.0-prod.01",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -839,7 +1277,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "12.19.1-release.0",
+              "version": "12.33.0-prod.01",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
