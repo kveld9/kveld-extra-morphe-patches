@@ -2,6 +2,7 @@ package app.morphe.patches.twitter
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
@@ -99,10 +100,29 @@ private val twitterTelemetryResourcePatch = resourcePatch(
     }
 }
 
+context(_: BytecodePatchContext)
+private fun hookVoidMethod(
+    definingClass: String,
+    name: String,
+    parameters: List<String>,
+    hookedMethods: MutableList<String>,
+    label: String,
+) {
+    Fingerprint(
+        definingClass = definingClass,
+        name = name,
+        parameters = parameters,
+        returnType = "V",
+    ).method.apply {
+        addInstructions(0, "return-void")
+        hookedMethods.add(label)
+    }
+}
+
 @Suppress("unused")
 val twitterBlockTelemetryPatch = bytecodePatch(
     name = "Block Telemetry & Trackers",
-    description = "Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers.",
+    description = "Neutralizes Google AppMeasurement and Firebase Performance Trace dispatchers, and strips advertising identifiers.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_TWITTER)
@@ -111,15 +131,59 @@ val twitterBlockTelemetryPatch = bytecodePatch(
     execute {
         val hookedMethods = mutableListOf<String>()
 
-        Fingerprint(
+        // Google AppMeasurement
+        hookVoidMethod(
             definingClass = "Lcom/google/android/gms/measurement/AppMeasurement;",
             name = "logEventInternal",
             parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;", "Landroid/os/Bundle;"),
-            returnType = "V",
-        ).method.apply {
-            addInstructions(0, "return-void")
-            hookedMethods.add("AppMeasurement.logEventInternal")
-        }
+            hookedMethods = hookedMethods,
+            label = "AppMeasurement.logEventInternal",
+        )
+
+        // Firebase Performance
+        val traceClass = "Lcom/google/firebase/perf/metrics/Trace;"
+        hookVoidMethod(
+            definingClass = traceClass,
+            name = "start",
+            parameters = emptyList(),
+            hookedMethods = hookedMethods,
+            label = "Trace.start",
+        )
+        hookVoidMethod(
+            definingClass = traceClass,
+            name = "stop",
+            parameters = emptyList(),
+            hookedMethods = hookedMethods,
+            label = "Trace.stop",
+        )
+        hookVoidMethod(
+            definingClass = traceClass,
+            name = "putAttribute",
+            parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;"),
+            hookedMethods = hookedMethods,
+            label = "Trace.putAttribute",
+        )
+        hookVoidMethod(
+            definingClass = traceClass,
+            name = "removeAttribute",
+            parameters = listOf("Ljava/lang/String;"),
+            hookedMethods = hookedMethods,
+            label = "Trace.removeAttribute",
+        )
+        hookVoidMethod(
+            definingClass = traceClass,
+            name = "putMetric",
+            parameters = listOf("Ljava/lang/String;", "J"),
+            hookedMethods = hookedMethods,
+            label = "Trace.putMetric",
+        )
+        hookVoidMethod(
+            definingClass = traceClass,
+            name = "incrementMetric",
+            parameters = listOf("Ljava/lang/String;", "J"),
+            hookedMethods = hookedMethods,
+            label = "Trace.incrementMetric",
+        )
 
         println("[X Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
     }

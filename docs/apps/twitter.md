@@ -21,7 +21,7 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 
 | Patch Name | Typology | Default State | Dependencies | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `X Telemetry Manifest Purge` | Neutralizes Google AppMeasurement event dispatchers, and strips advertising identifiers. |
+| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `X Telemetry Manifest Purge` | Neutralizes Google AppMeasurement and Firebase Performance Trace dispatchers, and strips advertising identifiers. |
 | **X Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips tracking and advertising permissions, disables measurement services and receivers, and injects opt-out metadata in `AndroidManifest.xml`. |
 | **Remove Premium Upsell** | `bytecodePatch` | `true` (Enabled) | None | Removes premium upsell surfaces. |
 | **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Removes promoted posts, trends and ads from timeline. |
@@ -68,13 +68,13 @@ The resource patch executes declarative AST transformations on `AndroidManifest.
 
 4. **Opt-Out Metadata Injection**:
    Injects declarative configuration tags under `<application>` to disable SDK telemetry collection across initialization sequences:
-   - `firebase_analytics_collection_enabled` = `false`
-   - `firebase_analytics_collection_deactivated` = `true`
-   - `firebase_crashlytics_collection_enabled` = `false`
-   - `firebase_performance_collection_enabled` = `false`
-   - `firebase_performance_collection_deactivated` = `true`
-   - `google_analytics_adid_collection_enabled` = `false`
-   - `google_analytics_default_allow_ad_personalization_signals` = `false`
+   - `firebase_analytics_collection_enabled` = `false`: Disables automated Firebase Analytics event recording.
+   - `firebase_analytics_collection_deactivated` = `true`: Permanently deactivates Analytics collection runtime triggers.
+   - `firebase_crashlytics_collection_enabled` = `false`: Suppresses Firebase Crashlytics crash report collection and scheduled uploads.
+   - `firebase_performance_collection_enabled` = `false`: Disables Firebase Performance Monitoring runtime metrics capture.
+   - `firebase_performance_collection_deactivated` = `true`: Permanently deactivates Firebase Performance collection.
+   - `google_analytics_adid_collection_enabled` = `false`: Blocks Google Analytics advertising ID association.
+   - `google_analytics_default_allow_ad_personalization_signals` = `false`: Disables personalization signals.
 
 5. **Application Invariants & Non-Interference**:
    The manifest purge explicitly preserves:
@@ -89,11 +89,17 @@ The resource patch executes declarative AST transformations on `AndroidManifest.
 The Dalvik bytecode layer neutralizes SDK event submission pipelines at execution time:
 
 1. **Targeted Entrypoint Hooks**:
-   - `Lcom/google/android/gms/measurement/AppMeasurement;->logEventInternal(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)V`
+   - `Lcom/google/android/gms/measurement/AppMeasurement;->logEventInternal(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)V`: Drops measurement event payloads and suppresses metric buffering.
+   - `Lcom/google/firebase/perf/metrics/Trace;->start()V`: Neutralizes performance trace session attachment and timer initialization.
+   - `Lcom/google/firebase/perf/metrics/Trace;->stop()V`: Suppresses trace completion validation and background metric payload submission to transport.
+   - `Lcom/google/firebase/perf/metrics/Trace;->putAttribute(Ljava/lang/String;Ljava/lang/String;)V`: Prevents custom dimension attribute recording on trace instances.
+   - `Lcom/google/firebase/perf/metrics/Trace;->removeAttribute(Ljava/lang/String;)V`: Neutralizes trace attribute removal mutations.
+   - `Lcom/google/firebase/perf/metrics/Trace;->putMetric(Ljava/lang/String;J)V`: Suppresses custom counter metric recording on trace instances.
+   - `Lcom/google/firebase/perf/metrics/Trace;->incrementMetric(Ljava/lang/String;J)V`: Suppresses custom counter increment mutations on trace instances.
 
 2. **Transformation Strategy**:
    - Injects immediate `return-void` at instruction index 0.
-   - Prevents allocation of event payloads, dispatch thread creation, and SQLite metric buffering.
+   - Prevents allocation of event payloads, dispatch thread creation, and background telemetry buffering.
    - Restricts hooks to stable, unobfuscated third-party SDK signatures, eliminating fragility across target app updates.
 
 3. **Telemetry & Zero-Zombie Standard**:
