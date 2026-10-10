@@ -99,6 +99,17 @@ enum class TargetApp(
         filePattern = Regex("(?i).*(?:capcut|lemon\\.lvoverseas).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "capcut",
     ),
+    OFFICEHUB(
+        id = "officehub",
+        appName = "Copilot",
+        packageName = Constants.OFFICEHUB_PACKAGE_NAME,
+        candidateFilenames = listOf(
+            "com.microsoft.office.officehubrow_16.0.20527.20022-45451809_3dpi_8lang_2feat_31889bcd787dae4ac175bd3061dbd6fb_apkmirror.com.apkm",
+            "officehub_${Constants.OFFICEHUB_TARGET_VERSION}.apkm"
+        ),
+        filePattern = Regex("(?i).*(?:officehub|copilot).*\\.(?:apk|apkm|xapk)$"),
+        patchDirectoryPart = "officehub",
+    ),
     ;
 
     companion object {

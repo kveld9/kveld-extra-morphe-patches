@@ -125,4 +125,20 @@ object Constants {
             )
         )
     )
+
+    const val OFFICEHUB_PACKAGE_NAME = "com.microsoft.office.officehubrow"
+    const val OFFICEHUB_TARGET_VERSION = "16.0.20527.20022"
+
+    val COMPATIBILITY_OFFICEHUB = Compatibility(
+        name = "Copilot",
+        packageName = OFFICEHUB_PACKAGE_NAME,
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x109CF0,
+        targets = listOf(
+            AppTarget(
+                version = OFFICEHUB_TARGET_VERSION,
+                description = "Download com.microsoft.office.officehubrow v\$OFFICEHUB_TARGET_VERSION (APKM) from APKMirror",
+            )
+        )
+    )
 }
