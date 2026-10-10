@@ -196,10 +196,10 @@ For non-trivial logic, Smali hooks, native ARM64 patching (`*.so`), or shared co
       b) **Cross-Compatibility & Shared Contracts** (`feat(patches): ...` or `feat(shared): ...`): Isolated when bridging shared features across apps outside an individual patch unit.
       c) **Standalone Technical Documentation** (`docs(<app>): ...` or `docs: ...`): Strictly reserved for documentation-only changes that are NOT part of a patch creation or update (e.g. typos, global architecture notes, general README updates).
     - Each commit must adhere strictly to Conventional Commits to ensure clean `@semantic-release` changelog generation and bisectability.
-15. **Mandatory Direct Commit & Strict No-Push / No-PR Policy**:
+15. **Mandatory Direct Commit & Push-on-Request / No-PR Policy**:
     - Automatically commit every completed, verified unit of work as soon as it is finished. Always commit; never ask whether to commit.
-    - **Strict No-Push**: NEVER push to remote (`git push` is strictly prohibited). Pushing is reserved exclusively for the user.
-    - **Strict No-PR**: This repository and maintainer DO NOT work with Pull Requests (PRs). Work is committed directly or managed locally without PRs. Under NO circumstances should you ask to proceed with push or PR closing sequences, and NEVER generate PR titles or PR descriptions.
+    - **Push on Explicit Request**: NEVER push autonomously. Execute `git push` ONLY when the user explicitly instructs it.
+    - **Strict No-PR**: This repository and maintainer DO NOT work with Pull Requests (PRs). Work is committed directly or managed locally without PRs. Under NO circumstances should you ask to proceed with PR closing sequences, and NEVER generate PR titles or PR descriptions.
     - Commits MUST strictly be atomic, isolated, independent, clean, and concise.
 16. **Prohibition of Multi-Version Target Retentions**: see the Single Target Version Invariant in Section 2; this also covers `README.md` and every other documentation reference.
 17. **Strict Prohibition of In-App Settings Screens & Dynamic UI Panels**:
