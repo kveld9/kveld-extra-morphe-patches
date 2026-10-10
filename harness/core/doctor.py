@@ -74,6 +74,23 @@ def run_doctor(repo_root: Path = REPO_ROOT) -> Tuple[List[DoctorCheck], bool]:
         results.append(DoctorCheck("java", "Java runtime (Gradle)", "FAIL",
                                    "no 'java' on PATH (Gradle build/verification needs a JVM)"))
 
+    if shutil.which("java"):
+        try:
+            proc = subprocess.run(["java", "--list-modules"], capture_output=True, text=True, timeout=15)
+            out = (proc.stdout or "") + (proc.stderr or "")
+            if "jdk.compiler" in out:
+                mod_line = next((ln.strip() for ln in out.splitlines() if "jdk.compiler" in ln), "jdk.compiler")
+                results.append(DoctorCheck("jdk.compiler", "JDK compiler module (jdk.compiler)", "PASS", mod_line))
+            else:
+                results.append(DoctorCheck("jdk.compiler", "JDK compiler module (jdk.compiler)", "FAIL",
+                                           "missing module: a full JDK (not JRE) is required (e.g. pacman -S jdk-openjdk / apt install openjdk-21-jdk)"))
+        except Exception as e:
+            results.append(DoctorCheck("jdk.compiler", "JDK compiler module (jdk.compiler)", "FAIL",
+                                       f"probe failed ({e}): a full JDK (not JRE) is required (e.g. pacman -S jdk-openjdk / apt install openjdk-21-jdk)"))
+    else:
+        results.append(DoctorCheck("jdk.compiler", "JDK compiler module (jdk.compiler)", "FAIL",
+                                   "no 'java' on PATH: a full JDK (not JRE) is required (e.g. pacman -S jdk-openjdk / apt install openjdk-21-jdk)"))
+
     gradlew = repo_root / "gradlew"
     if gradlew.is_file():
         results.append(DoctorCheck("gradlew", "Gradle wrapper", "PASS", str(gradlew)))
@@ -94,6 +111,17 @@ def run_doctor(repo_root: Path = REPO_ROOT) -> Tuple[List[DoctorCheck], bool]:
     else:
         results.append(DoctorCheck("adb", "ADB (physical-device validation)", "WARN",
                                    "not on PATH (only needed for on-device smoke tests)"))
+
+    for tool, purpose in (
+        ("zipalign", "APK alignment"),
+        ("apksigner", "APK signing"),
+    ):
+        tool_path = shutil.which(tool)
+        if tool_path:
+            results.append(DoctorCheck(f"build-tools:{tool}", f"Android build-tool {tool}", "PASS", tool_path))
+        else:
+            results.append(DoctorCheck(f"build-tools:{tool}", f"Android build-tool {tool}", "WARN",
+                                       f"not on PATH (only needed for {purpose}, runner has fallback discovery)"))
 
     for tool, label, version_cmd in (
         ("jadx", "jadx decompiler (optional BLOCKED triage)", ["jadx", "--version"]),
