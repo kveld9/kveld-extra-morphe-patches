@@ -31,12 +31,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [java-kotlin, javascript-typescript, python, actions]
+        language: [java-kotlin, python, actions]
         include:
           - language: java-kotlin
             build-mode: manual
-          - language: javascript-typescript
-            build-mode: none
           - language: python
             build-mode: none
           - language: actions
