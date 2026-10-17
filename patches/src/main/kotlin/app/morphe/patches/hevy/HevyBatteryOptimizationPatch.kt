@@ -6,6 +6,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.ensureRegisterCount
+import app.morphe.patches.shared.setAndroidAttribute
 import org.w3c.dom.Element
 
 private val hevyBatteryResourcePatch = resourcePatch(
@@ -77,7 +78,7 @@ private val hevyBatteryResourcePatch = resourcePatch(
                     val elem = elements.item(i) as? Element ?: continue
                     val name = elem.getAttribute("android:name")
                     if (name in disabledComponents) {
-                        elem.setAttribute("android:enabled", "false")
+                        elem.setAndroidAttribute("enabled", "false")
                         neutralizedCount++
                     }
                 }
@@ -106,15 +107,20 @@ private val hevyBatteryResourcePatch = resourcePatch(
                 for (j in 0 until intents.length) {
                     val intentElem = intents.item(j) as? Element ?: continue
                     val actions = intentElem.getElementsByTagName("action")
+                    if (actions.length == 0) continue
+                    var allBilling = true
                     for (k in 0 until actions.length) {
                         val actionElem = actions.item(k) as? Element ?: continue
                         val actionName = actionElem.getAttribute("android:name")
-                        if (actionName.contains("billing", ignoreCase = true) ||
-                            actionName.contains("InAppBillingService", ignoreCase = true)
+                        if (!(actionName.contains("billing", ignoreCase = true) ||
+                                actionName.contains("InAppBillingService", ignoreCase = true))
                         ) {
-                            intentsToRemove.add(intentElem)
+                            allBilling = false
                             break
                         }
+                    }
+                    if (allBilling) {
+                        intentsToRemove.add(intentElem)
                     }
                 }
                 intentsToRemove.forEach {

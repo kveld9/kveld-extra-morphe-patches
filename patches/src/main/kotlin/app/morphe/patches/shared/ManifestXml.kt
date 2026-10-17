@@ -45,7 +45,7 @@ internal fun Element.removeChildren(nodes: List<Node>) {
 }
 
 /** Replaces an android: attribute whether or not the decoded manifest bound it to the android namespace. */
-private fun Element.setAndroidAttribute(localName: String, value: String) {
+internal fun Element.setAndroidAttribute(localName: String, value: String) {
     removeAttribute("android:$localName")
     setAttributeNS(ANDROID_XML_NAMESPACE, "android:$localName", value)
 }
