@@ -162,7 +162,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 | **Block Trackers** | Blocks analytics and ad tracking. |  |
 | **Remove Extra Files** | Deletes hidden ad files and trackers to shrink the app. |  |
 | **Remove Extra Stores** | Disables payment components for other app stores you do not use. |  |
-| **Safer Connections** | Uses trusted certificates while keeping printer downloads working. |  |
+| **Printer-Compatible Connections** | Keeps HTTP cleartext for LAN printers and driver downloads and trusts user certificates. Disable for maximum strictness. |  |
 | **Skip Welcome Screen** | Skips the first-launch popup (the About menu still works). |  |
 | **Stop Background Sync** | Stops background tasks that drain the battery. |  |
 

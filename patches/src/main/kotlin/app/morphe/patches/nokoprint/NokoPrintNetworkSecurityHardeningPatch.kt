@@ -5,8 +5,8 @@ import app.morphe.patches.shared.Constants
 
 @Suppress("unused")
 val nokoPrintNetworkSecurityHardeningPatch = resourcePatch(
-    name = "Safer Connections",
-    description = "Uses trusted certificates while keeping printer downloads working.",
+    name = "Printer-Compatible Connections",
+    description = "Keeps HTTP cleartext for LAN printers and driver downloads and trusts user certificates. Less strict than stock; on by default because some printers need it, disable for maximum strictness.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_NOKOPRINT)
@@ -14,7 +14,7 @@ val nokoPrintNetworkSecurityHardeningPatch = resourcePatch(
     execute {
         val configFile = get("res/xml/network_security_config.xml")
         if (!configFile.exists()) {
-            println("[Safer Connections] network_security_config.xml not found - skipping.")
+            println("[Printer-Compatible Connections] network_security_config.xml not found - skipping.")
             return@execute
         }
 
@@ -30,6 +30,6 @@ val nokoPrintNetworkSecurityHardeningPatch = resourcePatch(
 """.trimIndent()
 
         configFile.writeText(hardenedConfig)
-        println("[Safer Connections] Configured network security config: enabled user certs, preserved cleartext traffic.")
+        println("[Printer-Compatible Connections] Configured network security config: enabled user certs, preserved cleartext traffic.")
     }
 }

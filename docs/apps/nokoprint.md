@@ -30,7 +30,7 @@ Technical documentation and patch catalog for NokoPrint on Android.
 | **Block Trackers (Setup)** | `resourcePatch` | `false` (Opt-in) | None | Removes ad permissions and disables tracking components. |
 | **Block Trackers** | `bytecodePatch` | `true` (Enabled) | `Block Trackers (Setup)` | Blocks analytics and ad tracking. |
 | **Remove Extra Stores** | `resourcePatch` | `true` (Enabled) | None | Disables payment components for other app stores you do not use. |
-| **Safer Connections** | `resourcePatch` | `true` (Enabled) | None | Uses trusted certificates while keeping printer downloads working. |
+| **Printer-Compatible Connections** | `resourcePatch` | `true` (Enabled) | None | Keeps HTTP cleartext for LAN printers and driver downloads and trusts user certificates. |
 | **Skip Welcome Screen** | `bytecodePatch` | `true` (Enabled) | None | Skips the first-launch popup (the About menu still works). |
 
 ---
@@ -57,9 +57,9 @@ Technical documentation and patch catalog for NokoPrint on Android.
 - **Remove Extra Stores**:
   - *Objective*: Remove unneeded payment libraries for alternative app stores.
   - *How*: Strips billing frameworks for Huawei AppGallery, Samsung Galaxy Store, and Amazon Appstore from the manifest.
-- **Safer Connections**:
-  - *Objective*: Enforce secure network transport while maintaining network printer discovery and driver downloads.
-  - *How*: Updates the network security configuration to trust user certificates while preserving necessary local cleartext traffic.
+- **Printer-Compatible Connections**:
+  - *Objective*: Keep LAN printer discovery and driver downloads working while trusting user-installed certificates.
+  - *How*: Updates the network security configuration to permit cleartext traffic (required by some printers) and adds user certificate trust. Less strict than stock; disable the patch for strict TLS-only.
 - **Skip Welcome Screen**:
   - *Objective*: Open directly to the main printer workspace without displaying first-launch welcome dialogs.
   - *How*: Suppresses the initial welcome popup dialog while keeping the About screen accessible through settings.
