@@ -85,6 +85,14 @@ private fun parseHermesHeader(buffer: ByteBuffer): HermesHeader? {
     )
 }
 
+private fun describeHermesBundle(buffer: ByteBuffer): String {
+    if (buffer.capacity() < 12) return "too small (${buffer.capacity()}B)"
+    val magic = buffer.getLong(0)
+    val version = buffer.getInt(8)
+    if (magic != HERMES_MAGIC) return "not Hermes (bad magic)"
+    return "HBC$version"
+}
+
 private fun calculateTableOffsets(header: HermesHeader): HermesTableOffsets {
     val funcHeadersPos = 128
     var pos = funcHeadersPos + header.functionCount * 16
@@ -297,7 +305,7 @@ val hevyUnlockProPatch = rawResourcePatch(
 
         val header = parseHermesHeader(buffer)
         if (header == null) {
-            println("[Unlock Pro] Bundle is not a valid Hermes HBC96 binary - skipping.")
+            println("[Unlock Pro] Bundle is not a valid Hermes HBC96 binary (${describeHermesBundle(buffer)}) - skipping.")
             return@execute
         }
 
