@@ -20,73 +20,78 @@ package app.morphe.patches.twitter
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patches.shared.Constants
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
+private const val PATCH_TAG = "[Disable Auto Refresh]"
+private val automaticFetchTypes = setOf("AUTO_REFRESH", "VIEWPORT_AWARE_AUTO_REFRESH")
+private val fetchTypes = automaticFetchTypes + setOf("GAP", "NEWER_THAN", "OLDER_THAN", "PULL_TO_REFRESH")
+private val ENUM_CONSTANT_FLAGS =
+    AccessFlags.PUBLIC.value or AccessFlags.STATIC.value or AccessFlags.FINAL.value or AccessFlags.ENUM.value
+
+// Home timeline jump-to-top handler; anchors the scan below to the home timeline.
 private val autoRefreshDispatcherFingerprint = Fingerprint(
     returnType = "V",
-    parameters = listOf("Lcom/x/urt/u1;"),
     strings = listOf(
         "x_lite_infra_home_jtt_clear_cache_enabled",
         "home_timeline_navigation_clear_cache_after_manual_jtt_enabled",
     ),
 )
 
-private val autoRefreshWorkerFingerprint = Fingerprint(
-    definingClass = "Lcom/x/android/main/helpers/e3;",
-    name = "invokeSuspend",
-    returnType = "Ljava/lang/Object;",
-    parameters = listOf("Ljava/lang/Object;"),
-)
-
-private val autoRefreshPageCallbackFingerprint = Fingerprint(
-    definingClass = "Lcom/arkivanov/decompose/extensions/compose/pages/c;",
-    name = "invokeSuspend",
-    returnType = "Ljava/lang/Object;",
-    parameters = listOf("Ljava/lang/Object;"),
-)
-
-private val automaticFetchTypes = setOf("AUTO_REFRESH", "VIEWPORT_AWARE_AUTO_REFRESH")
-
-private fun isAutomaticFetchSget(ins: ReferenceInstruction): Boolean {
-    val fieldRef = ins.reference as? FieldReference ?: return false
-    return fieldRef.type == "Lcom/x/models/timelines/d;" && fieldRef.name in automaticFetchTypes
+// Timeline fetch type enum (com.x.models.timelines.d in 12.34.0 and 12.35.0), found by its constants.
+// Its static initializer holds each constant's name as a string, so the string index yields the candidates.
+private fun BytecodePatchContext.fetchTypeEnum(): String {
+    val candidates = classDefByStrings(fetchTypes.first()).filter { classDef ->
+        classDef.superclass == "Ljava/lang/Enum;" &&
+            classDef.staticFields.filter { it.accessFlags == ENUM_CONSTANT_FLAGS && it.type == classDef.type }
+                .map { it.name }.containsAll(fetchTypes)
+    }.map { it.type }
+    return candidates.singleOrNull()
+        ?: error("$PATCH_TAG Expected one enum with constants $fetchTypes, found $candidates.")
 }
 
-private fun isTimelineFetchInvoke(ins: ReferenceInstruction): Boolean {
-    val methodRef = ins.reference as? MethodReference ?: return false
-    return methodRef.name == "k" && methodRef.definingClass == "Lcom/x/repositories/urt/r1;"
+private fun ReferenceInstruction.isAutomaticFetchSget(enum: String): Boolean {
+    val fieldRef = reference as? FieldReference ?: return false
+    return fieldRef.type == enum && fieldRef.name in automaticFetchTypes
 }
 
-private fun findAutomaticFetchInvokes(method: MutableMethod): List<Int> {
-    val instructions = method.implementation?.instructions?.toList()
-        ?: error("[Disable Auto Refresh] Target method in '${method.definingClass}' has no instructions.")
+// Timeline repository interface fetch(type, cursor): `r1.k` in 12.34.0, `r1.r` in 12.35.0.
+private fun ReferenceInstruction.isTimelineFetchInvoke(enum: String): Boolean {
+    val methodRef = reference as? MethodReference ?: return false
+    return methodRef.returnType == "V" && methodRef.parameterTypes.firstOrNull()?.toString() == enum
+}
+
+private fun Method.automaticFetchInvokes(enum: String): List<Int> {
+    val instructions = implementation?.instructions?.toList() ?: return emptyList()
     val sgetIndices = instructions.indices.filter { i ->
         instructions[i].opcode == Opcode.SGET_OBJECT &&
-            (instructions[i] as? ReferenceInstruction)?.let(::isAutomaticFetchSget) == true
+            (instructions[i] as ReferenceInstruction).isAutomaticFetchSget(enum)
     }
     return sgetIndices.mapNotNull { sgetIndex ->
         ((sgetIndex + 1)..minOf(sgetIndex + 3, instructions.lastIndex)).firstOrNull { i ->
             instructions[i].opcode == Opcode.INVOKE_INTERFACE &&
-                (instructions[i] as? ReferenceInstruction)?.let(::isTimelineFetchInvoke) == true
+                (instructions[i] as ReferenceInstruction).isTimelineFetchInvoke(enum)
         }
     }.distinct()
 }
 
-private fun nopAutomaticFetches(method: MutableMethod, expectedSites: Int): Int {
-    val targetInvokeIndices = findAutomaticFetchInvokes(method)
-    if (targetInvokeIndices.isEmpty()) {
-        error("[Disable Auto Refresh] Automatic timeline fetch call site not found in '${method.definingClass}->${method.name}'.")
-    }
-    if (targetInvokeIndices.size != expectedSites) {
-        error("[Disable Auto Refresh] Expected $expectedSites automatic fetch call sites, found ${targetInvokeIndices.size} in '${method.definingClass}->${method.name}'.")
-    }
+// Home dispatcher, home worker coroutine and pager callback; R8 merges the last two into unrelated classes.
+private fun automaticFetchFingerprint(enum: String) = Fingerprint(
+    custom = { method, _ -> method.automaticFetchInvokes(enum).isNotEmpty() },
+)
+
+private fun nopAutomaticFetches(method: MutableMethod, enum: String): Int {
+    val targetInvokeIndices = method.automaticFetchInvokes(enum)
     targetInvokeIndices.forEach { method.replaceInstruction(it, "nop") }
+    println("$PATCH_TAG Removed ${targetInvokeIndices.size} automatic fetch(es) in '${method.definingClass}->${method.name}'.")
     return targetInvokeIndices.size
 }
 
@@ -101,9 +106,13 @@ val twitterDisableAutoRefreshPatch = bytecodePatch(
     execute {
         var patched = 0
 
-        patched += nopAutomaticFetches(autoRefreshDispatcherFingerprint.method, 1)
-        patched += nopAutomaticFetches(autoRefreshWorkerFingerprint.method, 2)
-        patched += nopAutomaticFetches(autoRefreshPageCallbackFingerprint.method, 2)
+        val enum = fetchTypeEnum()
+        val dispatcher = autoRefreshDispatcherFingerprint.method
+        val matches = automaticFetchFingerprint(enum).matchAllOrNull().orEmpty()
+        if (matches.none { it.method.definingClass == dispatcher.definingClass && it.method.name == dispatcher.name }) {
+            error("$PATCH_TAG Home timeline dispatcher '${dispatcher.definingClass}->${dispatcher.name}' has no automatic fetch call site.")
+        }
+        matches.forEach { patched += nopAutomaticFetches(it.method, enum) }
 
         println("[Disable Auto Refresh] Applied $patched hooks -> timeline auto refresh disabled.")
     }

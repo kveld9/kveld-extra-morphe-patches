@@ -19,17 +19,24 @@
 package app.morphe.patches.twitter
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.Match
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.removeInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.morphe.patcher.fieldAccess
+import app.morphe.patcher.literal
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
+import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.wrapWithScratchRegisters
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -56,30 +63,8 @@ private val focalPostStateFingerprint = Fingerprint(
     strings = listOf("FocalPostState(timelinePostState="),
 )
 
-private val focalPostHeaderFingerprint = Fingerprint(
-    definingClass = "Lcom/x/urt/items/post/a2;",
-    name = "a",
-    returnType = "V",
-)
-
 private val timelineItemFilterFingerprint = Fingerprint(
     strings = listOf("surface_filter"),
-)
-
-private val urtItemPresenterFingerprint = Fingerprint(
-    definingClass = "Lcom/x/urt/b;",
-    name = "a",
-    returnType = "Lcom/x/presenter/a;",
-)
-
-private val postDetailPresenterFingerprint = Fingerprint(
-    definingClass = "Lcom/x/postdetail/m;",
-    name = "v",
-    returnType = "Lcom/x/presenter/a;",
-    parameters = listOf(
-        "I",
-        "Lcom/x/models/timelines/items/p0;",
-    ),
 )
 
 private val profileFollowRecommendationResponseFingerprint = Fingerprint(
@@ -98,28 +83,29 @@ private val canonicalPostToStringFingerprint = Fingerprint(
     strings = listOf("CanonicalPost(id="),
 )
 
-private val inlineActionBarItemFingerprint = Fingerprint(
-    definingClass = "Lcom/x/inlineactionbar/g;",
-    name = "invoke",
-)
-
 private val inlineActionsFingerprint = Fingerprint(
     strings = listOf("android_ntab_display_options_inline_actions_enabled"),
 )
 
 private val homeTopBarFingerprint = Fingerprint(
-    definingClass = "Lcom/x/home/tabbed/a;",
-    name = "i",
+    returnType = "V",
+    filters = listOf(string("home_navigation_bar_title")),
 )
 
+// Compose group keys of the add-tab (+) groups in the home tab pager and tab header. Both composables live in the top bar's class.
+private const val HOME_TAB_PAGER_ADD_GROUP = -585845020
+private const val HOME_TAB_HEADER_ADD_GROUP = -868946867
+
 private val homeTabBarPagerFingerprint = Fingerprint(
-    definingClass = "Lcom/x/home/tabbed/a;",
-    name = "j",
+    classFingerprint = homeTopBarFingerprint,
+    returnType = "V",
+    filters = listOf(literal(HOME_TAB_PAGER_ADD_GROUP)),
 )
 
 private val homeTabBarHeaderFingerprint = Fingerprint(
-    definingClass = "Lcom/x/home/tabbed/a;",
-    name = "f",
+    classFingerprint = homeTopBarFingerprint,
+    returnType = "V",
+    filters = listOf(literal(HOME_TAB_HEADER_ADD_GROUP)),
 )
 
 private val liveBannerFingerprint = Fingerprint(
@@ -129,6 +115,233 @@ private val liveBannerFingerprint = Fingerprint(
 private val homeTopicsTabFlagFingerprint = Fingerprint(
     strings = listOf("hometimeline_pinned_tabs_topics_enabled"),
 )
+
+private const val COMPOSER = "Landroidx/compose/runtime/Composer;"
+private val ENUM_CONSTANT_FLAGS =
+    AccessFlags.PUBLIC.value or AccessFlags.STATIC.value or AccessFlags.FINAL.value or AccessFlags.ENUM.value
+
+private fun Method.parameterTypeNames() = parameterTypes.map(CharSequence::toString)
+
+private fun dataClassToStringFingerprint(prefix: String) = Fingerprint(
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+    parameters = emptyList(),
+    filters = listOf(string(prefix)),
+)
+
+// Without an exact string filter, matchAllOrNull checks every method in the app, so lookups without one name their package.
+private fun BytecodePatchContext.uniqueMatch(what: String, fingerprint: Fingerprint, packagePrefix: String? = null): Match {
+    val matches = if (packagePrefix == null) {
+        fingerprint.matchAllOrNull().orEmpty()
+    } else {
+        buildList { classDefForEach { if (it.type.startsWith(packagePrefix)) addAll(fingerprint.matchAllOrNull(it).orEmpty()) } }
+    }
+    return matches.singleOrNull()
+        ?: error("[Timeline UI] Expected one $what, found ${matches.map { it.originalMethod }}.")
+}
+
+/** The field a data class `toString` reads right after appending [label]. */
+private fun Method.toStringField(label: String, opcode: Opcode, type: String? = null): FieldReference {
+    val instructions = implementation?.instructions?.toList().orEmpty()
+    val labelIndex = instructions.indexOfFirst {
+        ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == label
+    }
+    val field = if (labelIndex < 0) null else instructions.subList(labelIndex + 1, minOf(labelIndex + 6, instructions.size))
+        .firstOrNull { it.opcode == opcode }
+        ?.let { (it as ReferenceInstruction).reference as FieldReference }
+    return field?.takeIf { type == null || it.type == type }
+        ?: error("[Timeline UI] Field after '$label' not found in $definingClass->toString.")
+}
+
+private fun ClassDef.hasEnumConstant(name: String) =
+    staticFields.any { it.name == name && it.type == type && it.accessFlags == ENUM_CONSTANT_FLAGS }
+
+/** URT timeline models the item filters read, all found through their data class `toString`. */
+private class TimelineModels(
+    val item: String,
+    val itemEntryId: String,
+    val module: String,
+    val moduleInnerContent: String,
+    val moduleEntryId: String,
+    val moduleItem: String,
+    val moduleItemItem: String,
+    val user: String,
+)
+
+private fun BytecodePatchContext.timelineModels(): TimelineModels {
+    val moduleToString = uniqueMatch(
+        "UrtTimelineModule toString",
+        dataClassToStringFingerprint("UrtTimelineModule(innerContent="),
+    ).originalMethod
+    val innerContent = moduleToString.toStringField("UrtTimelineModule(innerContent=", Opcode.IGET_OBJECT, "Ljava/util/List;")
+    val moduleEntryId = moduleToString.toStringField(", entryId=", Opcode.IGET_OBJECT, "Ljava/lang/String;")
+
+    val moduleItemToString = uniqueMatch(
+        "UrtTimelineModuleItem toString",
+        dataClassToStringFingerprint("UrtTimelineModuleItem(item="),
+    ).originalMethod
+    val moduleItemItem = moduleItemToString.toStringField("UrtTimelineModuleItem(item=", Opcode.IGET_OBJECT)
+
+    val item = moduleItemItem.type
+    val user = uniqueMatch("UrtTimelineUser toString", dataClassToStringFingerprint("UrtTimelineUser(user="))
+        .originalMethod.definingClass
+    val module = moduleToString.definingClass
+    listOf(module, user).forEach { model ->
+        if (item !in classDefBy(model).interfaces) error("[Timeline UI] $model does not implement timeline item $item.")
+    }
+
+    val entryIdGetters = classDefBy(item).methods.filter {
+        AccessFlags.ABSTRACT.isSet(it.accessFlags) && it.parameterTypes.isEmpty() && it.returnType == "Ljava/lang/String;"
+    }
+    val entryIdGetter = entryIdGetters.singleOrNull()
+        ?: error("[Timeline UI] Expected one entryId getter on $item, found ${entryIdGetters.map { it.name }}.")
+
+    return TimelineModels(
+        item = item,
+        itemEntryId = ReferenceUtil.getMethodDescriptor(entryIdGetter),
+        module = module,
+        moduleInnerContent = ReferenceUtil.getFieldDescriptor(innerContent),
+        moduleEntryId = ReferenceUtil.getFieldDescriptor(moduleEntryId),
+        moduleItem = moduleItemToString.definingClass,
+        moduleItemItem = ReferenceUtil.getFieldDescriptor(moduleItemItem),
+        user = user,
+    ).also {
+        println(
+            "[Timeline UI] Resolved timeline item ${it.item} (entryId ${it.itemEntryId}), module ${it.module} " +
+                "(${it.moduleInnerContent}, ${it.moduleEntryId}), module item ${it.moduleItemItem}, user ${it.user}.",
+        )
+    }
+}
+
+// Focal post header composable that receives the follow button state.
+private fun focalPostHeaderFingerprint(followButtonState: String) = Fingerprint(
+    returnType = "V",
+    custom = { method, _ ->
+        AccessFlags.STATIC.isSet(method.accessFlags) &&
+            method.parameterTypeNames().let { followButtonState in it && COMPOSER in it }
+    },
+)
+
+// Post-detail timeline component; its constructor starts the conversation prefetch.
+private val postDetailComponentFingerprint = Fingerprint(
+    name = "<init>",
+    filters = listOf(string("Conversation request started for post ")),
+)
+
+/**
+ * Singletons implementing [presenter] that [method] reads with `sget-object` and returns right away.
+ * A set, because a Remove Ads hook adds another read of the same singleton.
+ */
+private fun BytecodePatchContext.emptyPresenterReads(method: Method, presenter: String): Set<FieldReference> {
+    val instructions = method.implementation?.instructions?.toList() ?: return emptySet()
+    return instructions.zipWithNext().mapNotNullTo(mutableSetOf()) { (read, next) ->
+        val field = (read as? ReferenceInstruction)?.reference as? FieldReference
+        field?.takeIf {
+            read.opcode == Opcode.SGET_OBJECT && next.opcode == Opcode.RETURN_OBJECT &&
+                it.type == it.definingClass && classDefByOrNull(it.type)?.interfaces?.contains(presenter) == true
+        }
+    }
+}
+
+// URT item presenter factory: (index, item, ...) -> presenter, falling back to the empty presenter.
+private fun BytecodePatchContext.urtItemPresenterFingerprint(item: String, presenter: String) = Fingerprint(
+    returnType = presenter,
+    custom = { method, _ ->
+        !AccessFlags.ABSTRACT.isSet(method.accessFlags) &&
+            method.parameterTypeNames().take(2) == listOf("I", item) &&
+            emptyPresenterReads(method, presenter).size == 1
+    },
+)
+
+private class DiscoverMoreHooks(
+    val postDetail: MutableMethod,
+    val urtItem: MutableMethod,
+    val presenter: String,
+    val emptyPresenter: String,
+)
+
+private fun BytecodePatchContext.discoverMoreHooks(item: String): DiscoverMoreHooks {
+    val postDetailClass = uniqueMatch("post-detail component constructor", postDetailComponentFingerprint).classDef
+    // Remove Ads may already have wrapped this method; its moved body is a morphe* copy with the same signature.
+    val postDetailCandidates = postDetailClass.methods.filter {
+        !AccessFlags.ABSTRACT.isSet(it.accessFlags) && it.parameterTypeNames() == listOf("I", item) &&
+            !it.name.startsWith("morphe")
+    }
+    val postDetail = postDetailCandidates.singleOrNull()
+        ?: error("[Timeline UI] Expected one (I, $item) presenter in ${postDetailClass.type}, found ${postDetailCandidates.map { it.name }}.")
+    val presenter = postDetail.returnType
+    if (!AccessFlags.INTERFACE.isSet(classDefBy(presenter).accessFlags)) {
+        error("[Timeline UI] Post-detail presenter type $presenter is not an interface.")
+    }
+
+    // Remove Ads may have given the post-detail presenter the same empty-presenter return, so search only com.x.urt.
+    val urtItem = uniqueMatch("URT item presenter factory", urtItemPresenterFingerprint(item, presenter), packagePrefix = "Lcom/x/urt/").method
+    val emptyPresenter = ReferenceUtil.getFieldDescriptor(emptyPresenterReads(urtItem, presenter).single())
+
+    return DiscoverMoreHooks(postDetail, urtItem, presenter, emptyPresenter).also {
+        println(
+            "[Timeline UI] Resolved post-detail presenter ${ReferenceUtil.getMethodDescriptor(postDetail)}, " +
+                "URT item presenter ${ReferenceUtil.getMethodDescriptor(urtItem)}, empty presenter $emptyPresenter.",
+        )
+    }
+}
+
+private fun Method.viewCountInvokeIndex(entry: String) =
+    implementation?.instructions?.indexOfFirst { ins ->
+        ins.opcode == Opcode.INVOKE_STATIC_RANGE &&
+            ((ins as? ReferenceInstruction)?.reference as? MethodReference)
+                ?.parameterTypes?.firstOrNull()?.toString() == entry
+    } ?: -1
+
+/** The inline action bar item lambda and the models its pill style and view count hooks read. */
+private class InlineActionBarItem(
+    val method: MutableMethod,
+    val pillStyle: String,
+    val entryActionType: String,
+    val actionType: String,
+)
+
+private fun BytecodePatchContext.inlineActionBarItem(): InlineActionBarItem {
+    // An enum's static initializer holds each constant's name as a string, so the string index yields the candidates.
+    val pillStyles = classDefByStrings("CountedPill").filter { classDef ->
+        classDef.superclass == "Ljava/lang/Enum;" &&
+            classDef.hasEnumConstant("CountedPill") && classDef.hasEnumConstant("Countless")
+    }.map { it.type }
+    val pillStyle = pillStyles.singleOrNull()
+        ?: error("[Timeline UI] Expected one enum with CountedPill and Countless, found $pillStyles.")
+
+    val entryToString = uniqueMatch(
+        "InlineActionEntry toString",
+        dataClassToStringFingerprint("InlineActionEntry(actionType="),
+    ).originalMethod
+    val entryActionType = entryToString.toStringField("InlineActionEntry(actionType=", Opcode.IGET_OBJECT)
+    val actionType = entryActionType.type
+    if (!classDefBy(actionType).hasEnumConstant("ViewCount")) {
+        error("[Timeline UI] Inline action type $actionType has no ViewCount constant.")
+    }
+
+    val entry = entryToString.definingClass
+    val method = uniqueMatch(
+        "inline action bar item lambda",
+        Fingerprint(
+            name = "invoke",
+            filters = listOf(
+                fieldAccess(definingClass = pillStyle, name = "CountedPill", type = pillStyle, opcode = Opcode.SGET_OBJECT),
+            ),
+            custom = { method, classDef ->
+                "Lkotlin/jvm/functions/Function2;" in classDef.interfaces && method.viewCountInvokeIndex(entry) >= 0
+            },
+        ),
+        packagePrefix = pillStyle.substringBeforeLast('/') + "/",
+    ).method
+
+    return InlineActionBarItem(method, pillStyle, ReferenceUtil.getFieldDescriptor(entryActionType), actionType).also {
+        println(
+            "[Timeline UI] Resolved inline action bar item ${it.method.definingClass}->${it.method.name}, " +
+                "pill style $pillStyle, action type ${it.entryActionType}.",
+        )
+    }
+}
 
 
 @Suppress("unused")
@@ -253,6 +466,8 @@ val twitterTimelineUiPatch = bytecodePatch(
 
     execute {
         var patched = 0
+        val timelineModels by lazy { timelineModels() }
+        val inlineActionBarItem by lazy { inlineActionBarItem() }
 
         // 1. hideBanner
         if (hideBanner ?: true) {
@@ -320,6 +535,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 ?: error("[Timeline UI] toString in '$stateClassDescriptor' has no instructions.")
 
             var followFieldName: String? = null
+            var followFieldType: String? = null
             var subscribeFieldName: String? = null
             var statefulFollowFieldName: String? = null
 
@@ -332,7 +548,9 @@ val twitterTimelineUiPatch = bytecodePatch(
                             for (j in (i + 1)..minOf(i + 5, toStringInstructions.lastIndex)) {
                                 val nextIns = toStringInstructions[j]
                                 if (nextIns.opcode == Opcode.IGET_OBJECT) {
-                                    followFieldName = ((nextIns as? ReferenceInstruction)?.reference as? FieldReference)?.name
+                                    val followField = (nextIns as? ReferenceInstruction)?.reference as? FieldReference
+                                    followFieldName = followField?.name
+                                    followFieldType = followField?.type
                                     break
                                 }
                             }
@@ -422,11 +640,14 @@ val twitterTimelineUiPatch = bytecodePatch(
             }
 
             // Null follow button state at composable entry instead of in state constructor (which crashed).
-            val headerMethod = focalPostHeaderFingerprint.method
-            val followParamIndex = headerMethod.parameterTypes.indexOfFirst { it.toString() == "Lcom/x/models/p2;" }
+            val followButtonState = followFieldType
+                ?: error("[Timeline UI] followButtonState field type not found in '$stateClassDescriptor'.")
+            val headerMethod = uniqueMatch("focal post header", focalPostHeaderFingerprint(followButtonState), packagePrefix = "Lcom/x/urt/items/post/").method
+            val followParamIndex = headerMethod.parameterTypes.indexOfFirst { it.toString() == followButtonState }
             if (followParamIndex < 0) {
                 error("[Timeline UI] Follow button state parameter not found in focal post header.")
             }
+            println("[Timeline UI] Resolved focal post header ${headerMethod.definingClass}->${headerMethod.name} (follow state $followButtonState).")
 
             val followParamRegister = headerMethod.parameterTypes
                 .take(followParamIndex)
@@ -440,6 +661,7 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 4. hideRecommendationItems
         if (hideRecommendationItems ?: true) {
+            val models = timelineModels
             timelineItemFilterFingerprint.method.addInstructionsWithLabels(
                 0,
                 """
@@ -459,16 +681,16 @@ val twitterTimelineUiPatch = bytecodePatch(
 
                     invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
                     move-result-object v2
-                    check-cast v2, Lcom/x/models/timelines/items/p0;
+                    check-cast v2, ${models.item}
 
-                    instance-of v3, v2, Lcom/x/models/timelines/items/b1;
+                    instance-of v3, v2, ${models.module}
                     if-eqz v3, :tlflt_cond_add_item
 
                     move-object v3, v2
-                    check-cast v3, Lcom/x/models/timelines/items/b1;
+                    check-cast v3, ${models.module}
 
                     # Check 1: entryId contains who-to-follow, who_to_follow, or user_recommendations
-                    iget-object v4, v3, Lcom/x/models/timelines/items/b1;->f:Ljava/lang/String;
+                    iget-object v4, v3, ${models.moduleEntryId}
                     if-eqz v4, :tlflt_cond_check_inner
 
                     const-string v5, "who-to-follow"
@@ -487,8 +709,8 @@ val twitterTimelineUiPatch = bytecodePatch(
                     if-nez v5, :tlflt_cond_drop_item
 
                     :tlflt_cond_check_inner
-                    # Check 3: innerContent contains d2 (UrtTimelineUser)
-                    iget-object v4, v3, Lcom/x/models/timelines/items/b1;->a:Ljava/util/List;
+                    # Check 3: innerContent contains UrtTimelineUser
+                    iget-object v4, v3, ${models.moduleInnerContent}
                     if-eqz v4, :tlflt_cond_add_item
 
                     invoke-interface {v4}, Ljava/util/List;->isEmpty()Z
@@ -499,13 +721,13 @@ val twitterTimelineUiPatch = bytecodePatch(
                     invoke-interface {v4, v5}, Ljava/util/List;->get(I)Ljava/lang/Object;
                     move-result-object v4
 
-                    # Defect 2 guard: verify instance-of e1 before casting
-                    instance-of v5, v4, Lcom/x/models/timelines/items/e1;
+                    # Defect 2 guard: verify instance-of UrtTimelineModuleItem before casting
+                    instance-of v5, v4, ${models.moduleItem}
                     if-eqz v5, :tlflt_cond_add_item
 
-                    check-cast v4, Lcom/x/models/timelines/items/e1;
-                    iget-object v4, v4, Lcom/x/models/timelines/items/e1;->a:Lcom/x/models/timelines/items/p0;
-                    instance-of v5, v4, Lcom/x/models/timelines/items/d2;
+                    check-cast v4, ${models.moduleItem}
+                    iget-object v4, v4, ${models.moduleItemItem}
+                    instance-of v5, v4, ${models.user}
                     if-nez v5, :tlflt_cond_drop_item
 
                     :tlflt_cond_add_item
@@ -529,10 +751,12 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 5. hideDiscoverMore
         if (hideDiscoverMore ?: true) {
+            val models = timelineModels
+            val hooks = discoverMoreHooks(models.item)
             // Discover more module entryId has the form "tweetdetailrelatedtweets-<postId>"
             val discoverItemTestSmali = """
                 :tluid_cond_check_item
-                invoke-interface {v0}, Lcom/x/models/timelines/items/p0;->c()Ljava/lang/String;
+                invoke-interface {v0}, ${models.itemEntryId}
                 move-result-object v1
                 if-eqz v1, :tluid_cond_continue
 
@@ -545,7 +769,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 goto :tluid_cond_continue
 
                 :tluid_cond_suppress_discover
-                sget-object v0, Lcom/x/urt/e0;->a:Lcom/x/urt/e0;
+                sget-object v0, ${hooks.emptyPresenter}
                 return-object v0
             """.trimIndent()
 
@@ -568,7 +792,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 $discoverItemTestSmali
 
                 :tluid_cond_continue
-                invoke-virtual {p0, p1, p2}, Lcom/x/postdetail/m;->morphePostDetailPresenterTimelineUi(ILcom/x/models/timelines/items/p0;)Lcom/x/presenter/a;
+                invoke-virtual {p0, p1, p2}, ${hooks.postDetail.definingClass}->morphePostDetailPresenterTimelineUi(I${models.item})${hooks.presenter}
                 move-result-object v0
                 return-object v0
             """.trimIndent()
@@ -590,16 +814,16 @@ val twitterTimelineUiPatch = bytecodePatch(
 
                 invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
                 move-result-object v2
-                check-cast v2, Lcom/x/models/timelines/items/p0;
+                check-cast v2, ${models.item}
 
-                instance-of v3, v2, Lcom/x/models/timelines/items/b1;
+                instance-of v3, v2, ${models.module}
                 if-eqz v3, :tldsc_cond_add_item
 
                 move-object v3, v2
-                check-cast v3, Lcom/x/models/timelines/items/b1;
+                check-cast v3, ${models.module}
 
-                # Null-guard on b1->f before contains
-                iget-object v4, v3, Lcom/x/models/timelines/items/b1;->f:Ljava/lang/String;
+                # Null-guard on entryId before contains
+                iget-object v4, v3, ${models.moduleEntryId}
                 if-eqz v4, :tldsc_cond_add_item
 
                 const-string v5, "relatedtweets"
@@ -625,16 +849,16 @@ val twitterTimelineUiPatch = bytecodePatch(
             timelineItemFilterFingerprint.method.addInstructionsWithLabels(0, listFilterSmali)
             patched++
 
-            urtItemPresenterFingerprint.method.addInstructionsWithLabels(0, inlineSmali)
+            hooks.urtItem.addInstructionsWithLabels(0, inlineSmali)
             patched++
 
-            val wrapped = postDetailPresenterFingerprint.method.wrapWithScratchRegisters(
-                mutableClassDefBy(postDetailPresenterFingerprint.method.definingClass),
+            val wrapped = hooks.postDetail.wrapWithScratchRegisters(
+                mutableClassDefBy(hooks.postDetail.definingClass),
                 "morphePostDetailPresenterTimelineUi",
                 3,
                 wrapperSmali,
             )
-            if (!wrapped) postDetailPresenterFingerprint.method.addInstructionsWithLabels(0, inlineSmali)
+            if (!wrapped) hooks.postDetail.addInstructionsWithLabels(0, inlineSmali)
             patched++
 
             if (patched == discBefore) {
@@ -889,9 +1113,10 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 13. hidePostMetrics
         if (hidePostMetrics ?: true) {
-            val method = inlineActionBarItemFingerprint.method
+            val item = inlineActionBarItem
+            val method = item.method
             val instructions = method.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/inlineactionbar/g;->invoke has no instructions.")
+                ?: error("[Timeline UI] Method ${method.definingClass}->invoke has no instructions.")
             val countedPillIndex = instructions.indexOfFirst { ins ->
                 ins.opcode == Opcode.SGET_OBJECT &&
                     ((ins as? ReferenceInstruction)?.reference as? FieldReference)?.name == "CountedPill"
@@ -901,11 +1126,11 @@ val twitterTimelineUiPatch = bytecodePatch(
                 val targetReg = countedPillIns.registerA
                 method.replaceInstruction(
                     countedPillIndex,
-                    "sget-object v$targetReg, Lcom/x/inlineactionbar/k1;->Countless:Lcom/x/inlineactionbar/k1;",
+                    "sget-object v$targetReg, ${item.pillStyle}->Countless:${item.pillStyle}",
                 )
                 patched++
             } else {
-                error("[Timeline UI] Failed to find CountedPill instruction in Lcom/x/inlineactionbar/g;->invoke.")
+                error("[Timeline UI] Failed to find CountedPill instruction in ${method.definingClass}->invoke.")
             }
         } else {
             println("[Timeline UI] Skipped hidePostMetrics: disabled by patch option.")
@@ -913,15 +1138,12 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 14. hideViewCount
         if (hideViewCount ?: true) {
-            val method = inlineActionBarItemFingerprint.method
+            val item = inlineActionBarItem
+            val method = item.method
             val instructions = method.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/inlineactionbar/g;->invoke has no instructions.")
-            val invokeIndex = instructions.indexOfFirst { ins ->
-                ins.opcode == Opcode.INVOKE_STATIC_RANGE &&
-                    ((ins as? ReferenceInstruction)?.reference as? MethodReference)?.let { ref ->
-                        ref.parameterTypes.firstOrNull() == "Lcom/x/models/l4;"
-                    } == true
-            }
+                ?: error("[Timeline UI] Method ${method.definingClass}->invoke has no instructions.")
+            val entry = item.entryActionType.substringBefore("->")
+            val invokeIndex = method.viewCountInvokeIndex(entry)
             if (invokeIndex >= 0) {
                 val invokeIns = instructions[invokeIndex]
                 val rangeIns = invokeIns as RegisterRangeInstruction
@@ -934,8 +1156,8 @@ val twitterTimelineUiPatch = bytecodePatch(
                 method.addInstructionsWithLabels(
                     invokeIndex,
                     """
-                        iget-object v3, v$startReg, Lcom/x/models/l4;->a:Lcom/x/models/v5;
-                        sget-object v4, Lcom/x/models/v5;->ViewCount:Lcom/x/models/v5;
+                        iget-object v3, v$startReg, ${item.entryActionType}
+                        sget-object v4, ${item.actionType}->ViewCount:${item.actionType}
                         if-eq v3, v4, :skip_view_count
                         invoke-static/range {v$startReg .. v$endReg}, $methodDescriptor
                         :skip_view_count
@@ -944,7 +1166,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 )
                 patched++
             } else {
-                error("[Timeline UI] Failed to find Lcom/google/android/gms/dynamite/d;->j invoke in Lcom/x/inlineactionbar/g;->invoke.")
+                error("[Timeline UI] Failed to find $entry render invoke in ${method.definingClass}->invoke.")
             }
         } else {
             println("[Timeline UI] Skipped hideViewCount: disabled by patch option.")
@@ -963,11 +1185,13 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 17. timelineAddTab
         if (timelineAddTab ?: true) {
-            val pagerMethod = homeTabBarPagerFingerprint.method
+            val pagerMethod = uniqueMatch("home tab pager", homeTabBarPagerFingerprint).method
+            val pagerName = "${pagerMethod.definingClass}->${pagerMethod.name}"
+            println("[Timeline UI] Resolved home tab pager $pagerName.")
             val pagerInstructions = pagerMethod.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/home/tabbed/a;->j has no instructions.")
+                ?: error("[Timeline UI] Method $pagerName has no instructions.")
             val pagerConstIdx = pagerInstructions.indexOfFirst { ins ->
-                (ins as? NarrowLiteralInstruction)?.narrowLiteral == -585845020
+                (ins as? NarrowLiteralInstruction)?.narrowLiteral == HOME_TAB_PAGER_ADD_GROUP
             }
             if (pagerConstIdx > 0) {
                 val ifEqzIdx = pagerInstructions.subList(0, pagerConstIdx).indexOfLast {
@@ -980,17 +1204,19 @@ val twitterTimelineUiPatch = bytecodePatch(
                     pagerMethod.addInstructions(ifEqzIdx, constIns)
                     patched++
                 } else {
-                    error("[Timeline UI] Preceding if-eqz branch not found before const group in Lcom/x/home/tabbed/a;->j.")
+                    error("[Timeline UI] Preceding if-eqz branch not found before const group in $pagerName.")
                 }
             } else {
-                error("[Timeline UI] Target group constant -585845020 not found in Lcom/x/home/tabbed/a;->j.")
+                error("[Timeline UI] Target group constant $HOME_TAB_PAGER_ADD_GROUP not found in $pagerName.")
             }
 
-            val headerMethod = homeTabBarHeaderFingerprint.method
+            val headerMethod = uniqueMatch("home tab header", homeTabBarHeaderFingerprint).method
+            val headerName = "${headerMethod.definingClass}->${headerMethod.name}"
+            println("[Timeline UI] Resolved home tab header $headerName.")
             val headerInstructions = headerMethod.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/home/tabbed/a;->f has no instructions.")
+                ?: error("[Timeline UI] Method $headerName has no instructions.")
             val headerConstIdx = headerInstructions.indexOfFirst { ins ->
-                (ins as? NarrowLiteralInstruction)?.narrowLiteral == -868946867
+                (ins as? NarrowLiteralInstruction)?.narrowLiteral == HOME_TAB_HEADER_ADD_GROUP
             }
             if (headerConstIdx > 0) {
                 val ifEqzIdx = headerInstructions.subList(0, headerConstIdx).indexOfLast {
@@ -1003,10 +1229,10 @@ val twitterTimelineUiPatch = bytecodePatch(
                     headerMethod.addInstructions(ifEqzIdx, constIns)
                     patched++
                 } else {
-                    error("[Timeline UI] Preceding if-eqz branch not found before const group in Lcom/x/home/tabbed/a;->f.")
+                    error("[Timeline UI] Preceding if-eqz branch not found before const group in $headerName.")
                 }
             } else {
-                error("[Timeline UI] Target group constant -868946867 not found in Lcom/x/home/tabbed/a;->f.")
+                error("[Timeline UI] Target group constant $HOME_TAB_HEADER_ADD_GROUP not found in $headerName.")
             }
 
             if (neutralizeFlag(homeTopicsTabFlagFingerprint, "hometimeline_pinned_tabs_topics_enabled", "Timeline UI")) {
@@ -1020,15 +1246,20 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 18. timelineTopBar
         if (timelineTopBar ?: true) {
-            val method = homeTopBarFingerprint.method
+            val method = uniqueMatch("home top bar", homeTopBarFingerprint).method
+            val topBarName = "${method.definingClass}->${method.name}"
             val instructions = method.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/home/tabbed/a;->i has no instructions.")
-            val followButtonFieldIdx = instructions.indexOfFirst { ins ->
+                ?: error("[Timeline UI] Method $topBarName has no instructions.")
+            // The follow button slot is the only composable lambda singleton the top bar reads from its own class.
+            val ownSingletonReads = instructions.withIndex().filter { (_, ins) ->
                 ins.opcode == Opcode.SGET_OBJECT &&
                     ((ins as? ReferenceInstruction)?.reference as? FieldReference)?.let {
-                        it.definingClass == "Lcom/x/home/tabbed/a;" && (it.name == "e" || it.name == "d")
+                        it.definingClass == method.definingClass && it.type.startsWith("Landroidx/compose/runtime/internal/")
                     } == true
             }
+            val followButtonFieldIdx = ownSingletonReads.singleOrNull()?.index
+                ?: error("[Timeline UI] Expected one follow button lambda read in $topBarName, found ${ownSingletonReads.size}.")
+            println("[Timeline UI] Resolved home top bar $topBarName (follow button ${(instructions[followButtonFieldIdx] as ReferenceInstruction).reference}).")
             if (followButtonFieldIdx > 0) {
                 val ifEqzIdx = instructions.subList(0, followButtonFieldIdx).indexOfLast {
                     it.opcode == Opcode.IF_EQZ
@@ -1042,13 +1273,13 @@ val twitterTimelineUiPatch = bytecodePatch(
                         method.addInstructions(0, constIns)
                         patched++
                     } else {
-                        error("[Timeline UI] Top bar branch register v$reg is not a method parameter in Lcom/x/home/tabbed/a;->i.")
+                        error("[Timeline UI] Top bar branch register v$reg is not a method parameter in $topBarName.")
                     }
                 } else {
-                    error("[Timeline UI] Preceding if-eqz branch not found before follow button field in Lcom/x/home/tabbed/a;->i.")
+                    error("[Timeline UI] Preceding if-eqz branch not found before follow button field in $topBarName.")
                 }
             } else {
-                error("[Timeline UI] Follow button field not found in Lcom/x/home/tabbed/a;->i.")
+                error("[Timeline UI] Follow button field not found in $topBarName.")
             }
         } else {
             println("[Timeline UI] Skipped timelineTopBar: disabled by patch option.")

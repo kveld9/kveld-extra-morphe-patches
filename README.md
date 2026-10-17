@@ -118,7 +118,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 **Supported versions:**
 
-| 12.34.0-prod.01 |
+| 12.35.0-prod.01 |
 | :---: |
 
 | Patch | Description | Options |

@@ -23,16 +23,27 @@ import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 
+private const val DM_CALL_STATE_PACKAGE = "Lcom/x/dm/api/av/"
+
+// Conversation header actions composable: (chat state, show calls, ...). It is the only one with this
+// signature that branches on the audio/video call state.
 private val dmCallButtonsFingerprint = Fingerprint(
-    definingClass = "Lcom/x/dm/chat/composables/u0;",
-    name = "d",
     returnType = "V",
     parameters = listOf(
-        "Lcom/x/dms/components/chat/v4;", "Z", "Lkotlin/jvm/functions/Function0;",
+        "Lcom/x/dms/components/chat/", "Z", "Lkotlin/jvm/functions/Function0;",
         "Lkotlin/jvm/functions/Function1;", "Landroidx/compose/ui/Modifier;",
         "Landroidx/compose/runtime/Composer;", "I",
     ),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any { instruction ->
+            instruction.opcode == Opcode.INSTANCE_OF &&
+                ((instruction as ReferenceInstruction).reference as TypeReference).type.startsWith(DM_CALL_STATE_PACKAGE)
+        } == true
+    },
 )
 
 @Suppress("unused")
@@ -59,7 +70,7 @@ val twitterDmDebloatPatch = bytecodePatch(
             val method = dmCallButtonsFingerprint.method
             method.addInstructions(0, "const/16 p1, 0x0")
             patched++
-            println("[DM Debloat] Hid audio and video call buttons in '${method.definingClass}'.")
+            println("[DM Debloat] Hid audio and video call buttons in '${method.definingClass}->${method.name}'.")
         } else {
             println("[DM Debloat] Skipped call buttons: hideDmCalls disabled by patch option.")
         }

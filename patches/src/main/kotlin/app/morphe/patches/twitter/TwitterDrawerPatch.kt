@@ -23,7 +23,11 @@ import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.util.proxy.mutableTypes.MutableClass
+import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patches.shared.Constants
+import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 
 private val drawerDiscountPillFingerprint = Fingerprint(
     strings = listOf("DrawerDiscountPillAlpha"),
@@ -34,7 +38,9 @@ private val sideBarFingerprint = Fingerprint(
 )
 
 
-private val drawerIconIds = mutableMapOf<String, Int>()
+private val drawerResourceIds = mutableMapOf<String, Int>()
+
+private const val GET_GROK_STRING = "drawer_get_grok"
 
 private val drawerIconNames = setOf(
     "ic_vector_feedback_stroke",
@@ -48,42 +54,73 @@ private val drawerIconNames = setOf(
     "ic_vector_rocket_stroke",
 )
 
-// Resolve drawer icon IDs by name because X renumbers resources on every release.
+private val drawerResourceNames = mapOf(
+    "drawable" to drawerIconNames,
+    "string" to setOf(GET_GROK_STRING),
+)
+
+// Resolve drawer icon and label IDs by name because X renumbers resources on every release.
 private val twitterDrawerIconIdsPatch = resourcePatch {
     compatibleWith(Constants.COMPATIBILITY_TWITTER)
 
     execute {
         val publicXml = get("res/values/public.xml")
         if (!publicXml.exists()) {
-            error("[Drawer Items] res/values/public.xml not found; cannot resolve drawer icon IDs.")
+            error("[Drawer Items] res/values/public.xml not found; cannot resolve drawer resource IDs.")
         }
 
+        val typeRegex = Regex("""type="([^"]+)"""")
         val nameRegex = Regex("""name="([^"]+)"""")
         val idRegex = Regex("""id="(0x[0-9a-fA-F]+)"""")
 
-        drawerIconIds.clear()
+        drawerResourceIds.clear()
         publicXml.useLines { lines ->
             for (line in lines) {
-                if (!line.contains("""type="drawable"""")) continue
+                val type = typeRegex.find(line)?.groupValues?.get(1) ?: continue
+                val names = drawerResourceNames[type] ?: continue
                 val name = nameRegex.find(line)?.groupValues?.get(1) ?: continue
-                if (name in drawerIconNames) {
+                if (name in names) {
                     val id = idRegex.find(line)?.groupValues?.get(1) ?: continue
-                    drawerIconIds[name] = java.lang.Long.decode(id).toInt()
+                    drawerResourceIds[name] = java.lang.Long.decode(id).toInt()
                 }
             }
         }
 
-        val missing = drawerIconNames.filter { it !in drawerIconIds }
+        val missing = drawerResourceNames.values.flatten().filter { it !in drawerResourceIds }
         if (missing.isNotEmpty()) {
-            error("[Drawer Items] Drawable '${missing.joinToString(", ")}' not found in public.xml.")
+            error("[Drawer Items] Resource '${missing.joinToString(", ")}' not found in public.xml.")
         }
 
-        println("[Drawer Items] Resolved ${drawerIconIds.size} drawer icon IDs.")
+        println("[Drawer Items] Resolved ${drawerResourceIds.size} drawer resource IDs.")
     }
 }
 
-private fun drawerIconId(name: String): Int =
-    drawerIconIds[name] ?: error("[Drawer Items] Unresolved drawer icon ID: $name")
+private fun drawerResourceId(name: String): Int =
+    drawerResourceIds[name] ?: error("[Drawer Items] Unresolved drawer resource ID: $name")
+
+private fun Method.hasLiteral(value: Int) = implementation?.instructions?.any {
+    (it as? WideLiteralInstruction)?.wideLiteral == value.toLong()
+} == true
+
+// Drawer row composables: (label, icon, onClick, modifier, ...). The plain row has 8 parameters,
+// the row with a badge and trailing content has 10.
+private fun MutableClass.drawerRowMethod(parameterCount: Int): MutableMethod {
+    val candidates = methods.filter { method ->
+        method.returnType == "V" &&
+            method.parameterTypes.size == parameterCount &&
+            method.parameterTypes.first().toString() == "Ljava/lang/String;" &&
+            method.parameterTypes[1].startsWith("Lcom/x/icons/")
+    }
+    return candidates.singleOrNull()
+        ?: error("[Drawer Items] Expected one $parameterCount-parameter drawer row in '$type', found ${candidates.map { it.name }}.")
+}
+
+// Icon model passed to the drawer rows (com.x.icons.b in 12.34.0 and 12.35.0); its only int field is the drawable ID.
+private fun BytecodePatchContext.iconIdField(iconType: String): String {
+    val fields = classDefBy(iconType).instanceFields.filter { it.type == "I" }.map { it.name }
+    return fields.singleOrNull()
+        ?: error("[Drawer Items] Expected one int field in icon model '$iconType', found $fields.")
+}
 
 
 @Suppress("unused")
@@ -172,14 +209,19 @@ val twitterDrawerPatch = bytecodePatch(
         val classDescriptor = discountPillMethod.definingClass
         val classDef = mutableClassDefBy(classDescriptor)
 
-        val methodE = classDef.methods.firstOrNull { it.name == "e" && it.parameterTypes.size == 4 }
-            ?: error("[Drawer Items] Discount pill method 'e' not found in '$classDescriptor'.")
-        val methodO = classDef.methods.firstOrNull { it.name == "o" && it.parameterTypes.size == 4 }
-            ?: error("[Drawer Items] Get Grok method 'o' not found in '$classDescriptor'.")
-        val methodP = classDef.methods.firstOrNull { it.name == "p" && it.parameterTypes.size == 8 }
-            ?: error("[Drawer Items] Standard item method 'p' not found in '$classDescriptor'.")
-        val methodQ = classDef.methods.firstOrNull { it.name == "q" && it.parameterTypes.size == 10 }
-            ?: error("[Drawer Items] Item method 'q' not found in '$classDescriptor'.")
+        val methodE = discountPillMethod
+        val getGrokId = drawerResourceId(GET_GROK_STRING)
+        val grokCandidates = classDef.methods.filter { it.hasLiteral(getGrokId) }
+        val methodO = grokCandidates.singleOrNull()
+            ?: error("[Drawer Items] Expected one Get Grok method in '$classDescriptor', found ${grokCandidates.map { it.name }}.")
+        val methodP = classDef.drawerRowMethod(8)
+        val methodQ = classDef.drawerRowMethod(10)
+        val iconType = methodP.parameterTypes[1].toString()
+        val iconIdField = "$iconType->${iconIdField(iconType)}:I"
+        println(
+            "[Drawer Items] Resolved '$classDescriptor': pill=${methodE.name}, grok=${methodO.name}, " +
+                "row=${methodP.name}, badgedRow=${methodQ.name}, icon id=$iconIdField.",
+        )
 
         var patched = 0
 
@@ -205,12 +247,12 @@ val twitterDrawerPatch = bytecodePatch(
             val smaliP = """
                 move-object/from16 v0, p1
                 if-eqz v0, :cond_keep_p
-                iget v1, v0, Lcom/x/icons/b;->a:I
-                const v2, ${drawerIconId("ic_vector_feedback_stroke")}
+                iget v1, v0, $iconIdField
+                const v2, ${drawerResourceId("ic_vector_feedback_stroke")}
                 if-ne v1, v2, :cond_check_p_feedback
                 return-void
                 :cond_check_p_feedback
-                const v2, ${drawerIconId("ic_vector_help_circle")}
+                const v2, ${drawerResourceId("ic_vector_help_circle")}
                 if-ne v1, v2, :cond_keep_p
                 return-void
                 :cond_keep_p
@@ -224,7 +266,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hideProfile ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_person_stroke")}
+                const v2, ${drawerResourceId("ic_vector_person_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -233,7 +275,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hidePremium ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_verified_stroke")}
+                const v2, ${drawerResourceId("ic_vector_verified_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -242,7 +284,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hideCommunities ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_communities_stroke")}
+                const v2, ${drawerResourceId("ic_vector_communities_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -251,7 +293,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hideBookmarks ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_bookmark_stroke")}
+                const v2, ${drawerResourceId("ic_vector_bookmark_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -260,7 +302,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hideLists ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_lists_stroke")}
+                const v2, ${drawerResourceId("ic_vector_lists_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -269,7 +311,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hideSpaces ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_spaces_stroke")}
+                const v2, ${drawerResourceId("ic_vector_spaces_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -278,7 +320,7 @@ val twitterDrawerPatch = bytecodePatch(
         if (hideCreatorStudio ?: true) {
             val label = "check_q_${qChecks.size}"
             qChecks.add("""
-                const v2, ${drawerIconId("ic_vector_rocket_stroke")}
+                const v2, ${drawerResourceId("ic_vector_rocket_stroke")}
                 if-ne v1, v2, :$label
                 return-void
                 :$label
@@ -289,7 +331,7 @@ val twitterDrawerPatch = bytecodePatch(
             val smaliQ = """
                 move-object/from16 v0, p1
                 if-eqz v0, :cond_keep_q
-                iget v1, v0, Lcom/x/icons/b;->a:I
+                iget v1, v0, $iconIdField
                 ${qChecks.joinToString("\n")}
                 :cond_keep_q
             """.trimIndent()

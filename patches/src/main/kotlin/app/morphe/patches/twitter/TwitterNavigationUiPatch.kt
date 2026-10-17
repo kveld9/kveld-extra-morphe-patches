@@ -26,6 +26,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
@@ -34,16 +35,26 @@ private val badgesFingerprint = Fingerprint(
     strings = listOf("grok_android_tab_badge_enabled"),
 )
 
+// AnimatedVisibility(visible: Boolean, modifier: Modifier, ...).
+private fun Instruction.isAnimatedVisibilityCall(): Boolean =
+    (opcode == Opcode.INVOKE_STATIC || opcode == Opcode.INVOKE_STATIC_RANGE) &&
+        ((this as ReferenceInstruction).reference as MethodReference).let { ref ->
+            ref.definingClass.startsWith("Landroidx/compose/animation/") &&
+                ref.returnType == "V" &&
+                ref.parameterTypes.take(2).map { it.toString() } == listOf("Z", "Landroidx/compose/ui/Modifier;")
+        }
+
+// FAB host composable (modifier, content lambda): the only one with this signature that wraps its
+// content in AnimatedVisibility.
 private val fabVisibilityFingerprint = Fingerprint(
-    definingClass = "Lcom/x/ui/common/i3;",
-    name = "d",
     returnType = "V",
     parameters = listOf(
         "Landroidx/compose/ui/Modifier;",
-        "Landroidx/compose/runtime/internal/e;",
+        "Landroidx/compose/runtime/internal/",
         "Landroidx/compose/runtime/Composer;",
         "I",
     ),
+    custom = { method, _ -> method.implementation?.instructions?.any { it.isAnimatedVisibilityCall() } == true },
 )
 
 private val fabMenuFingerprint = Fingerprint(
@@ -56,9 +67,10 @@ private val bottomNavFingerprint = Fingerprint(
     strings = listOf("android_x_lite_persistent_bottom_nav_enabled"),
 )
 
+// The flag is also read in com.x.grok; the landing screen read controls the tab.
 private val grokTabFingerprint = Fingerprint(
-    definingClass = "Lcom/x/main/landing/f0;",
     strings = listOf("android_webview_grok_tab_enabled"),
+    custom = { _, classDef -> classDef.type.startsWith("Lcom/x/main/landing/") },
 )
 
 private val exploreTabsFingerprint = Fingerprint(
@@ -154,13 +166,7 @@ val twitterNavigationUiPatch = bytecodePatch(
             // forcing its AnimatedVisibility to false.
             val method = fabVisibilityFingerprint.method
             val instructions = method.implementation!!.instructions.toList()
-            val targetIndex = instructions.indexOfFirst { ins ->
-                (ins.opcode == Opcode.INVOKE_STATIC || ins.opcode == Opcode.INVOKE_STATIC_RANGE) &&
-                    ((ins as? ReferenceInstruction)?.reference as? MethodReference)?.let { ref ->
-                        ref.returnType == "V" &&
-                            ref.parameterTypes.take(2).map { it.toString() } == listOf("Z", "Landroidx/compose/ui/Modifier;")
-                    } == true
-            }
+            val targetIndex = instructions.indexOfFirst { it.isAnimatedVisibilityCall() }
             if (targetIndex < 0) {
                 error("[Navigation UI] FAB visibility call not found in '${method.definingClass}'.")
             }
@@ -179,6 +185,7 @@ val twitterNavigationUiPatch = bytecodePatch(
             }
             method.addInstructions(targetIndex, constIns)
             patched++
+            println("[Navigation UI] Hid FAB in '${method.definingClass}->${method.name}'.")
         } else {
             println("[Navigation UI] Skipped hideFab: disabled by patch option.")
         }
@@ -209,6 +216,7 @@ val twitterNavigationUiPatch = bytecodePatch(
         if (grokTab ?: true) {
             if (neutralizeFlag(grokTabFingerprint, "android_webview_grok_tab_enabled", "Navigation UI")) {
                 patched++
+                println("[Navigation UI] Hid Grok tab in '${grokTabFingerprint.method.definingClass}->${grokTabFingerprint.method.name}'.")
             } else {
                 error("[Navigation UI] Failed to neutralize 'android_webview_grok_tab_enabled' flag.")
             }

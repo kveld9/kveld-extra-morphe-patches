@@ -44,11 +44,14 @@ val twitterPauseSearchSuggestionsPatch = bytecodePatch(
         val repoClassDescriptor = clinitMethod.definingClass
         val repoClass = mutableClassDefBy(repoClassDescriptor)
 
-        val persistMethod = repoClass.methods.firstOrNull { method ->
-            method.parameterTypes.size == 3 &&
-                method.parameterTypes[0].toString() == repoClassDescriptor &&
-                method.returnType == "Ljava/lang/Object;"
-        } ?: error("[Pause Search Suggestions] Recent search persist method not found in '$repoClassDescriptor'.")
+        // The suspend writer takes the recent search and a SuspendLambda continuation. The loader takes
+        // a ContinuationImpl. 12.34.0 compiles the writer as a static helper, 12.35.0 as an instance method.
+        val persistCandidates = repoClass.methods.filter { method ->
+            method.returnType == "Ljava/lang/Object;" &&
+                method.parameterTypes.lastOrNull()?.toString() == "Lkotlin/coroutines/jvm/internal/SuspendLambda;"
+        }
+        val persistMethod = persistCandidates.singleOrNull()
+            ?: error("[Pause Search Suggestions] Expected one recent search persist method in '$repoClassDescriptor', found ${persistCandidates.map { it.name }}.")
 
         val persistInstructions = persistMethod.implementation?.instructions?.toList()
             ?: error("[Pause Search Suggestions] Method '${persistMethod.name}' in '$repoClassDescriptor' has no instructions.")
@@ -69,6 +72,6 @@ val twitterPauseSearchSuggestionsPatch = bytecodePatch(
         )
         patched++
 
-        println("[Pause Search Suggestions] Applied $patched hooks -> local search suggestions persistence disabled.")
+        println("[Pause Search Suggestions] Applied $patched hooks ($repoClassDescriptor->${persistMethod.name}) -> local search suggestions persistence disabled.")
     }
 }
