@@ -43,7 +43,7 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
 
         val libDir = File(apkRoot, "lib")
         if (!libDir.exists() || !libDir.isDirectory) {
-            println("[CapCut Native Slimmer] Skipped: lib directory not found.")
+            println("[Native Bloat Slimmer] Skipped: lib directory not found.")
             return@execute
         }
 
@@ -59,7 +59,7 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
             .toList()
 
         if (candidateFiles.isEmpty()) {
-            println("[CapCut Native Slimmer] No candidate native libraries found in lib/ - skipping.")
+            println("[Native Bloat Slimmer] No candidate native libraries found in lib/ - skipping.")
             return@execute
         }
 
@@ -76,11 +76,11 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
         }
 
         if (strippedLibs.isEmpty()) {
-            println("[CapCut Native Slimmer] Target native libraries were already zeroed.")
+            println("[Native Bloat Slimmer] Target native libraries were already zeroed.")
             return@execute
         }
 
         val totalSavedMb = String.format(Locale.US, "%.2f", savedBytes.toDouble() / (1024 * 1024))
-        println("[CapCut Native Slimmer] Stripped ${strippedLibs.size} companion native libraries (${strippedLibs.joinToString(", ")}) -> Saved $totalSavedMb MB")
+        println("[Native Bloat Slimmer] Stripped ${strippedLibs.size} companion native libraries (${strippedLibs.joinToString(", ")}) -> Saved $totalSavedMb MB")
     }
 }

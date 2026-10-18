@@ -32,7 +32,7 @@ val capcutLocaleSlimmerPatch = resourcePatch(
         val assetsLocalesDir = File(apkRoot, "assets/locales")
 
         if (!assetsLocalesDir.exists() || !assetsLocalesDir.isDirectory) {
-            println("[CapCut Locale Assets Slimmer] Skipped: assets/locales directory not found.")
+            println("[Locale Assets Slimmer] Skipped: assets/locales directory not found.")
             return@execute
         }
 
@@ -69,11 +69,11 @@ val capcutLocaleSlimmerPatch = resourcePatch(
         }
 
         if (strippedAssetFilesCount == 0) {
-            println("[CapCut Locale Assets Slimmer] No unselected asset locale files found to strip (retained locales: ${selectedLocales.sorted().joinToString(", ")}).")
+            println("[Locale Assets Slimmer] No unselected asset locale files found to strip (retained locales: ${selectedLocales.sorted().joinToString(", ")}).")
             return@execute
         }
 
         val savedFormatted = LocaleUtils.formatBytes(savedBytes)
-        println("[CapCut Locale Assets Slimmer] Stripped $strippedAssetFilesCount unselected asset locale files -> Saved $savedFormatted (retained locales: ${selectedLocales.sorted().joinToString(", ")})")
+        println("[Locale Assets Slimmer] Stripped $strippedAssetFilesCount unselected asset locale files -> Saved $savedFormatted (retained locales: ${selectedLocales.sorted().joinToString(", ")})")
     }
 }
