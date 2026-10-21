@@ -524,7 +524,11 @@ val twitterBlockTelemetryPatch = bytecodePatch(
 
         val removedNullChecks = removePerfGetInstanceNullChecks()
 
-        println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        if (hookedMethods.isEmpty()) {
+            println("[Block Telemetry & Trackers] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        }
         println("[Block Telemetry & Trackers] Redirected Braze, Google Ads/DoubleClick, and Sentry ingest endpoints to 0.0.0.0.")
         println("[Block Telemetry & Trackers] Removed $removedNullChecks Firebase Performance getInstance() null checks (registrar purged).")
     }

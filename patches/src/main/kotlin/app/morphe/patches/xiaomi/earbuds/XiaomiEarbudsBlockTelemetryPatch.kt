@@ -183,6 +183,10 @@ val xiaomiEarbudsBlockTelemetryPatch = bytecodePatch(
             hookedMethods.add("Analytics.track")
         }
 
-        println("[Block Trackers] Neutralized ${hookedMethods.size} telemetry, event tracking, and auto-report hooks.")
+        if (hookedMethods.isEmpty()) {
+            println("[Block Trackers] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Block Trackers] Neutralized ${hookedMethods.size} telemetry, event tracking, and auto-report hooks.")
+        }
     }
 }

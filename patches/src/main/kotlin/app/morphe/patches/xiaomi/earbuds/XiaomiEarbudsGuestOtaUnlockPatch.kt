@@ -82,6 +82,10 @@ val xiaomiEarbudsGuestOtaUnlockPatch = bytecodePatch(
             hookedMethods.add("DeviceSettingsFragment.initFunctionListener\$lambda\$30")
         }
 
-        println("[Update Without Account] Unlocked guest firmware update checks across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Update Without Account] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Update Without Account] Unlocked guest firmware update checks across ${hookedMethods.size} targets.")
+        }
     }
 }

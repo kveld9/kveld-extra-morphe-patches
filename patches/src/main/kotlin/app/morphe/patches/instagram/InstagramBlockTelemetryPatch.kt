@@ -122,6 +122,10 @@ val instagramBlockTelemetryPatch = bytecodePatch(
             hookedMethods.add("PrivacyControlledUploader.HZG")
         }
 
-        println("[Instagram Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        if (hookedMethods.isEmpty()) {
+            println("[Instagram Telemetry] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Instagram Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        }
     }
 }

@@ -222,6 +222,10 @@ val xiaomiEarbudsBackgroundOptimizerPatch = bytecodePatch(
             hookedMethods.add("ConnectivityCompanionDeviceService.onDeviceAppeared(AssociationInfo)")
         }
 
-        println("[Stop Background Activity] Neutralized ${hookedMethods.size} background keep-alive, foreground service, and BLE discovery hooks.")
+        if (hookedMethods.isEmpty()) {
+            println("[Stop Background Activity] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Stop Background Activity] Neutralized ${hookedMethods.size} background keep-alive, foreground service, and BLE discovery hooks.")
+        }
     }
 }

@@ -296,6 +296,10 @@ val moovitBlockTelemetryPatch = bytecodePatch(
             hookedMethods.add("InneractiveAdManager.wasInitialized")
         }
 
-        println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        if (hookedMethods.isEmpty()) {
+            println("[Block Telemetry & Trackers] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        }
     }
 }

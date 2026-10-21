@@ -225,6 +225,10 @@ val powerPointBlockTelemetryPatch = bytecodePatch(
         hookTelemetryDispatchers(hookedMethods)
         hookAdMeasurementPlatformData(hookedMethods)
 
-        println("[PowerPoint Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        if (hookedMethods.isEmpty()) {
+            println("[PowerPoint Telemetry] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[PowerPoint Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        }
     }
 }

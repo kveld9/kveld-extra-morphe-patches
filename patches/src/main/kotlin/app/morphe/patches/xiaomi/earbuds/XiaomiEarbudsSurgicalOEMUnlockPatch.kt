@@ -79,6 +79,10 @@ val xiaomiEarbudsSurgicalOEMUnlockPatch = bytecodePatch(
             hookedMethods.add("DeviceSettingsFragment.initFunctionListener\$lambda\$24(SuperAivs)")
         }
 
-        println("[Unlock for Other Phones] Neutralized Xiaomi OEM restrictions across ${hookedMethods.size} targets (SuperAivs 5009 item, voice settings, and SpatialAudio dialog).")
+        if (hookedMethods.isEmpty()) {
+            println("[Unlock for Other Phones] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Unlock for Other Phones] Neutralized Xiaomi OEM restrictions across ${hookedMethods.size} targets (SuperAivs 5009 item, voice settings, and SpatialAudio dialog).")
+        }
     }
 }

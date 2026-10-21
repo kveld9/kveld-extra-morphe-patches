@@ -67,6 +67,10 @@ val xiaomiEarbudsSoundFeaturesUnlockPatch = bytecodePatch(
             hookedMethods.add("SoundEffectVM.isEnableSpatialAudio")
         }
 
-        println("[Unlock Sound Features] Unlocked sound features and bypassed restrictions across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Unlock Sound Features] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Unlock Sound Features] Unlocked sound features and bypassed restrictions across ${hookedMethods.size} targets.")
+        }
     }
 }

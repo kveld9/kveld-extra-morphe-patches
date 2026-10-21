@@ -351,6 +351,10 @@ val lightroomBlockTelemetryPatch = bytecodePatch(
             println("[Block Telemetry & Trackers] Skipped: ConfigurationStateManager (lv.i) absent (DTM fetch stripped from input).")
         }
 
-        println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods and endpoints: ${hookedMethods.joinToString(", ")}.")
+        if (hookedMethods.isEmpty()) {
+            println("[Block Telemetry & Trackers] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods and endpoints: ${hookedMethods.joinToString(", ")}.")
+        }
     }
 }

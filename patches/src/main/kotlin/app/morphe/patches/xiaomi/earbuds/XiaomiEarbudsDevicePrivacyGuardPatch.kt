@@ -295,6 +295,10 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             hookedMethods.add("AddDeviceFragment.hasScanCondition")
         }
 
-        println("[Device Privacy Guard] Anonymized device identifiers and blinded hardware privacy getters across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Device Privacy Guard] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Device Privacy Guard] Anonymized device identifiers and blinded hardware privacy getters across ${hookedMethods.size} targets.")
+        }
     }
 }

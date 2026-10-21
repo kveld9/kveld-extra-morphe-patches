@@ -513,7 +513,12 @@ val officeHubBlockTelemetryPatch = bytecodePatch(
         val totalRewritten = defaultStats.rewrittenStrings + customStats.rewrittenStrings
         val totalClasses = touchedClassTypes.size
 
-        println("[Copilot Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods and rewrote $totalRewritten host literals across $totalClasses classes -> 0.0.0.0.")
+        if (hookedMethods.isEmpty()) {
+            println("[Copilot Telemetry] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Copilot Telemetry] Hooked ${hookedMethods.size} telemetry dispatch methods.")
+        }
+        println("[Copilot Telemetry] Rewrote ${totalRewritten} host literals across ${totalClasses} classes -> 0.0.0.0.")
 
         if (distinctUserHosts.isNotEmpty()) {
             val appliedUser = distinctUserHosts.filter { (customStats.ruleCounts[it] ?: 0) > 0 }

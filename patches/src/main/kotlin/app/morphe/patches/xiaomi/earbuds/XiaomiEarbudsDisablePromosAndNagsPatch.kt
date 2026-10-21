@@ -272,7 +272,11 @@ val xiaomiEarbudsDisablePromosAndNagsPatch = bytecodePatch(
             hookedMethods.add("DeviceListFragment.requestBluetoothPermissionForS")
         }
 
-        println("[Skip Popups & Tutorials] Disabled startup privacy agreements, onboarding guides, region selector prompts, promotional banners, Bluetooth permission nags, and review nags across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Skip Popups & Tutorials] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Skip Popups & Tutorials] Disabled startup privacy agreements, onboarding guides, region selector prompts, promotional banners, Bluetooth permission nags, and review nags across ${hookedMethods.size} targets.")
+        }
     }
 }
 

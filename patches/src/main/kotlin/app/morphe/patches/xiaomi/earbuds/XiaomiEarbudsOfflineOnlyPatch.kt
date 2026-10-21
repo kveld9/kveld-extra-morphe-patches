@@ -308,6 +308,10 @@ val xiaomiEarbudsOfflineOnlyPatch = bytecodePatch(
             hookedMethods.add("DnsSystem.lookup")
         }
 
-        println("[Offline Only] Spoofed offline network state across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Offline Only] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Offline Only] Spoofed offline network state across ${hookedMethods.size} targets.")
+        }
     }
 }

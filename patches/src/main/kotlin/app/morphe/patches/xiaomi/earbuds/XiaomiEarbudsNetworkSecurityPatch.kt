@@ -104,6 +104,10 @@ val xiaomiEarbudsNetworkSecurityPatch = bytecodePatch(
             hookedMethods.add("CertificatePinner.check\$okhttp(String, Function0)")
         }
 
-        println("[Safer Connections] Neutralized OkHttp CertificatePinner across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Safer Connections] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Safer Connections] Neutralized OkHttp CertificatePinner across ${hookedMethods.size} targets.")
+        }
     }
 }

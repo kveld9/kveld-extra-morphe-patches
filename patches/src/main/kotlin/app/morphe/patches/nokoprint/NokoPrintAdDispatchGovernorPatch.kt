@@ -302,6 +302,10 @@ val nokoPrintAdDispatchGovernorPatch = bytecodePatch(
             hookedMethods.add("m4.a(trackAdRevenue)")
         }
 
-        println("[Block Ads] Neutralized ${hookedMethods.size} ad dispatch, promo, and telemetry hooks.")
+        if (hookedMethods.isEmpty()) {
+            println("[Block Ads] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Block Ads] Neutralized ${hookedMethods.size} ad dispatch, promo, and telemetry hooks.")
+        }
     }
 }

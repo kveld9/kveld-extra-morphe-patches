@@ -342,6 +342,10 @@ val xiaomiEarbudsAntiTamperBypassPatch = bytecodePatch(
             }
         }
 
-        println("[Run on Rooted Devices] Neutralized anti-tamper, root/emulator checks, and JS bridges across ${hookedMethods.size} targets.")
+        if (hookedMethods.isEmpty()) {
+            println("[Run on Rooted Devices] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Run on Rooted Devices] Neutralized anti-tamper, root/emulator checks, and JS bridges across ${hookedMethods.size} targets.")
+        }
     }
 }
