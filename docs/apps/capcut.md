@@ -126,7 +126,7 @@ Technical documentation and patch catalog for CapCut on Android.
 1. **Templates Catalog**:
    The templates feed returns an empty list on re-signed builds due to remote signature verification.
 2. **Security Modal Re-prompting**:
-   The unsafe package modal dialog render, the cracking verdict persistence, and the template-feed cracking interceptor are stubbed, so the blocking notice cannot display even when remote verdicts evaluate. Server-refused content (Templates catalog) may still fail to load. The notice text is delivered by the server (it is not an APK string), so a verdict persisted by an older build or by the stock app (`isCracking` / `crackCode` preferences) can survive an upgrade install: after updating to a build with these stubs, perform a clean install (uninstall, then install) instead of installing over the previous copy. A notice on a clean install from current sources means a fresh server verdict through a path not yet covered; report it with the build date.
+   On clean installs across certain devices and network environments, a blocking, non-dismissible security notice dialog was observed at startup despite existing stubs (lab devices remain clean). This server-driven render path is suppressed by preventing verification interceptor registration during network initialization so remote responses never trigger the security notice. Server-refused content (Templates catalog) may still fail to load.
 3. **Cloud VIP Assets**:
    Remote cloud-hosted VIP assets and server-validated processing remain locked.
 4. **Server-Side Capacity and Region Rejections**:
