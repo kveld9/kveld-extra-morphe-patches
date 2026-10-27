@@ -418,6 +418,7 @@ For bug reports, patch inquiries, or feature proposals, open an issue using the 
 | Contributor | Role & Contributions |
 | :--- | :--- |
 | <a href="https://github.com/aeries0x"><img src="https://github.com/aeries0x.png" alt="@aeries0x" width="48" height="48" style="border-radius: 50%;" /><br><b>@aeries0x</b></a> | Feature request: Proposed X – Default reply sorting (open replies sorted by Likes) feature request ([#12](https://github.com/kveld9/kveld-extra-morphe-patches/issues/12)). |
+| <a href="https://github.com/TheJNXx"><img src="https://github.com/TheJNXx.png" alt="@TheJNXx" width="48" height="48" style="border-radius: 50%;" /><br><b>@TheJNXx</b></a> | Feature request: Proposed Microsoft Word patches (telemetry removal, premium unlock, login requirement removal) feature request ([#36](https://github.com/kveld9/kveld-extra-morphe-patches/issues/36)). |
 | <a href="https://github.com/springfurst"><img src="https://github.com/springfurst.png" alt="@springfurst" width="48" height="48" style="border-radius: 50%;" /><br><b>@springfurst</b></a> | Contributed the Use Places API (New) Moovit search patch ([#44](https://github.com/kveld9/kveld-extra-morphe-patches/pull/44)). |
 <!-- CONTRIBUTORS_END -->
 
