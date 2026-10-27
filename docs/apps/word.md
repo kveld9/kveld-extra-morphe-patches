@@ -45,7 +45,7 @@ Technical documentation and patch catalog for Microsoft Word on Android.
    - **How**: Completes first-run tasks immediately, marks FTUX as shown, and neutralizes sign-in/SSO gates.
 4. **Block Telemetry & Trackers**:
    - **Objective**: Silence analytics, crash-reporting, and ad-measurement SDKs.
-   - **How**: Stubs OneDS/Aria lifecycle and dispatch methods, blanks ad identifiers, and disables tracking manifest components with declarative opt-out flags.
+   - **How**: Stubs OneDS/Aria lifecycle and dispatch methods, blanks ad identifiers, disables tracking manifest components with declarative opt-out flags, and neutralizes Office early-telemetry dispatch (TelemetryHelper) so null strings from resigned installs never reach native code.
 
 ### B. Manifest Compatibility Layer (`resourcePatch`)
 
