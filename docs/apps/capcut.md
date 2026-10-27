@@ -137,6 +137,8 @@ Technical documentation and patch catalog for CapCut on Android.
    A widely shared 19.8.0 mod APK advertising premium unlock, watermark removal, and working online features was compared statically against this patch set (19.9.0 target). Every advertised behavior maps to a patch already present here (Unlock Premium incl. BusinessManager flags, Remove Watermark incl. default ending, Ultra HD export, premium templates, effects region bypass, API redirect). The mod keeps stock API hosts, stock device identifiers, and all bundled ad and analytics SDKs, so its feature set is a subset of what these patches provide; differences can also come from the mod's built-in native runtime hooks, which this set intentionally does not copy.
 7. **Per-Install Effects Device Identifier**:
    Effects and template requests generate and persist a unique, stable random identifier for each installation instead of sharing a single device ID. This prevents request throttling caused by multiple users sharing the same server-side rate limit bucket. The platform identifier remains spoofed as Windows to preserve region restriction bypasses.
+8. **Integrity Certificate Verification**:
+   Re-signed builds are flagged by the integrity check, and this patch aligns the embedded certificate record so installs pass as clean.
 
 ---
 
