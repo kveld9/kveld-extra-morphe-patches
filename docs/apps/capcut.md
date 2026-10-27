@@ -126,7 +126,7 @@ Technical documentation and patch catalog for CapCut on Android.
 1. **Templates Catalog**:
    The templates feed returns an empty list on re-signed builds due to remote signature verification.
 2. **Security Modal Re-prompting**:
-   On clean installs across certain devices and network environments, a blocking, non-dismissible security notice dialog was observed at startup despite existing stubs (lab devices remain clean). This server-driven render path is suppressed by preventing verification interceptor registration during network initialization so remote responses never trigger the security notice. Server-refused content (Templates catalog) may still fail to load.
+   On clean installs the blocking security notice does not appear with the published patch set. Local experiments that replaced the integrity interceptor or the effects device ID re-triggered it and were reverted; if a notice appears on a clean install from current sources, report it with the build date.
 3. **Cloud VIP Assets**:
    Remote cloud-hosted VIP assets and server-validated processing remain locked.
 4. **Server-Side Capacity and Region Rejections**:
