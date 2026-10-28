@@ -73,7 +73,7 @@
 
 ![](images/divider-purple.svg)
 
-Each app targets exactly one version, the latest supported release. See the [Patch Catalog](#patch-catalog) for the per-app supported version, and each [Application Guide](#application-guides) (section 1, Target & Compatibility) for package name, exact version, variant, and download source. Always use the exact version listed there.
+Each app targets exactly one version, the latest supported release. See the [Patch Catalog](#patch-catalog) for the per-app supported version. Each [Application Guide](#application-guides) (section 1, Target & Compatibility) carries the package name, variant, and download source; always use the exact version listed in the Patch Catalog.
 
 <p align="center"><a href="#top"><b>&uarr; Back to top</b></a></p>
 
