@@ -254,7 +254,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp and DataTransport components, and strips advertising permissions. |  |
+| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp and DataTransport components, strips advertising permissions, and neutralizes Office early-telemetry dispatch (TelemetryHelper). |  |
 | **Bypass Code Transparency** | Bypasses the code transparency checks. |  |
 | **Disable Login Requirement** | Removes login requirement and FTUX paywall screens. |  |
 | **Remove Shared User ID** | Removes the sharedUserId attribute from the manifest to prevent installation conflicts. |  |
