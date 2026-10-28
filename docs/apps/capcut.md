@@ -10,7 +10,7 @@ Technical documentation and patch catalog for CapCut on Android.
 | :--- | :--- |
 | **Target App** | CapCut |
 | **Package Name** | `com.lemon.lvoverseas` |
-| **Target Version** | `Single pinned version -- see the per-app supported version in the README Patch Catalog (generated from the built .mpp)` |
+| **Target Version** | `Single pinned version (see README Patch Catalog)` |
 | **Target Package Format** | standalone APK |
 | **Primary Architecture** | `arm64-v8a` |
 | **Authoritative Source** | APKMirror |

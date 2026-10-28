@@ -10,7 +10,7 @@ Technical documentation and patch catalog for NokoPrint on Android.
 | :--- | :--- |
 | **Target App** | NokoPrint - WiFi, Bluetooth, USB |
 | **Package Name** | `com.nokoprint` |
-| **Target Version** | `Single pinned version -- see the per-app supported version in the README Patch Catalog (generated from the built .mpp)` |
+| **Target Version** | `Single pinned version (see README Patch Catalog)` |
 | **Target Package Format** | XAPK bundle |
 | **Primary Architecture** | universal (`arm64-v8a` / `armeabi-v7a` / `x86` / `x86_64`) |
 | **Download Target** | [APKPure](https://d.apkpure.com/b/XAPK/com.nokoprint) |

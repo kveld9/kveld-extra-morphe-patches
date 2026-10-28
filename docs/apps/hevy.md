@@ -10,7 +10,7 @@ Technical documentation and patch catalog for Hevy Gym Log Workout Tracker on An
 | :--- | :--- |
 | **Target App** | Hevy - Gym Log Workout Tracker |
 | **Package Name** | `com.hevy` |
-| **Target Version** | `Single pinned version -- see the per-app supported version in the README Patch Catalog (generated from the built .mpp)` |
+| **Target Version** | `Single pinned version (see README Patch Catalog)` |
 | **Target Package Format** | APKM bundle |
 | **Primary Architecture** | `arm64-v8a` / `armeabi-v7a` |
 | **Download Target** | [APKMirror](https://www.apkmirror.com/apk/hevy-gym-workout-tracker/hevy-gym-log-workout-tracker/) |

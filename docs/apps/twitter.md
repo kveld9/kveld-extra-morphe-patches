@@ -12,7 +12,7 @@ UI and debloating patches were removed because Piko-NewX covers them; this repos
 | :--- | :--- |
 | **Target App** | X |
 | **Package Name** | `com.twitter.android` |
-| **Target Version** | `Single pinned version -- see the per-app supported version in the README Patch Catalog (generated from the built .mpp)` |
+| **Target Version** | `Single pinned version (see README Patch Catalog)` |
 | **Target Package Format** | APKM |
 | **Primary Architecture** | `arm64-v8a` |
 | **Authoritative Source** | APKMirror |
