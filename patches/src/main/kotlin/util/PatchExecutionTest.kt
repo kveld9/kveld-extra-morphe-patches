@@ -158,18 +158,6 @@ enum class TargetApp(
         patchDirectoryPart = "sdmse",
         referenceSha256 = Constants.SDMSE_INPUT_SHA256,
     ),
-    WORD(
-        id = "word",
-        appName = "Word",
-        packageName = Constants.WORD_PACKAGE_NAME,
-        candidateFilenames = listOf(
-            "com.microsoft.office.word_${Constants.WORD_TARGET_VERSION}-2005437911_6dpi_24lang_59bd95dc67e5e1aca5e2f10d6a96bda8_apkmirror.com.apkm",
-            "word_${Constants.WORD_TARGET_VERSION}.apkm",
-        ),
-        filePattern = Regex("(?i).*word.*\\.(?:apk|apkm|xapk)$"),
-        patchDirectoryPart = "word",
-        referenceSha256 = Constants.WORD_INPUT_SHA256,
-    ),
     IBISPAINT(
         id = "ibispaint",
         appName = "IbisPaint X",

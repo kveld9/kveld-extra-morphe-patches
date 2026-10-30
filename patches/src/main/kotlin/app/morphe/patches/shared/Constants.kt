@@ -184,23 +184,6 @@ object Constants {
         )
     )
 
-    const val WORD_PACKAGE_NAME = "com.microsoft.office.word"
-    const val WORD_TARGET_VERSION = "16.0.20527.20034"
-    const val WORD_INPUT_SHA256 = "a8a49a89eb2ec077049cfcb9ffbd68467597ab6a22dc032801496f37884d3213"
-
-    val COMPATIBILITY_WORD = Compatibility(
-        name = "Word",
-        packageName = WORD_PACKAGE_NAME,
-        apkFileType = ApkFileType.APKM,
-        appIconColor = 0x2B579A,
-        targets = listOf(
-            AppTarget(
-                version = WORD_TARGET_VERSION,
-                description = "Download com.microsoft.office.word v$WORD_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 2005437911 from APKMirror",
-            )
-        )
-    )
-
     const val IBIS_PAINT_PACKAGE_NAME = "jp.ne.ibis.ibispaintx.app"
     const val IBIS_PAINT_TARGET_VERSION = "14.1.2"
     const val IBIS_PAINT_INPUT_SHA256 = ""
