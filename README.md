@@ -202,27 +202,6 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 </details>
 
 <details>
-<summary>PowerPoint&nbsp;&nbsp;•&nbsp;&nbsp;<b>6 patches</b></summary>
-<br>
-
-**Supported versions:**
-
-| 16.0.20527.20034 |
-| :---: |
-| Download com.microsoft.office.powerpoint v16.0.20527.20034 (APKM) arm64-v8a 120-480dpi versionCode 2005437911 (BUNDLE 5 S) from APKMirror |
-
-| Patch | Description | Options |
-|----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp activities and DataTransport components, and strips advertising permissions. |  |
-| **Bypass Code Transparency** | Bypasses the code transparency checks. |  |
-| **Disable Login Requirement** | Removes login requirement and FTUX paywall screens. |  |
-| **PowerPoint Companion Native Slimmer** | Strips optional companion native binaries (React Native and Hermes JavaScript runtime stack) via in-situ zeroing. WARNING: stripped libraries are load-bearing for React Native initialization - enabling this WILL crash the app with UnsatisfiedLinkError when Copilot or other React Native surfaces start, not merely hide those features. |  |
-| **Remove Shared User ID** | Removes the sharedUserId attribute from the manifest to prevent installation conflicts. |  |
-| **Unlock 365 Family** | Unlocks Microsoft 365 Family subscription features locally. |  |
-
-</details>
-
-<details>
 <summary>SUBE&nbsp;&nbsp;•&nbsp;&nbsp;<b>5 patches</b></summary>
 <br>
 
@@ -239,26 +218,6 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 | **Cut Firebase Entirely** | Rewrites the Firebase Installations API endpoint (firebaseinstallations.googleapis.com) to 0.0.0.0 in DEX bytecode across all classes, severing background FID registration and installation auth tokens. WARNING: Breaks push notifications (FCM) and cloud messaging. |  |
 | **Cut Firebase Manifest** | Disables Firebase Cloud Messaging services and instance ID receivers in AndroidManifest.xml. Breaks push notifications and FCM background delivery. |  |
 | **SUBE Telemetry Manifest Purge** | Strips advertising permissions, disables measurement services, providers, and install receivers, and injects opt-out metadata flags in AndroidManifest.xml. |  |
-
-</details>
-
-<details>
-<summary>Word&nbsp;&nbsp;•&nbsp;&nbsp;<b>5 patches</b></summary>
-<br>
-
-**Supported versions:**
-
-| 16.0.20527.20034 |
-| :---: |
-| Download com.microsoft.office.word v16.0.20527.20034 (APKM) arm64-v8a 120-480dpi versionCode 2005437911 from APKMirror |
-
-| Patch | Description | Options |
-|----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, nullifies ad measurement platform identifiers (AIFA, AppSetId), disables HockeyApp and DataTransport components, strips advertising permissions, and neutralizes Office early-telemetry dispatch (TelemetryHelper). |  |
-| **Bypass Code Transparency** | Bypasses the code transparency checks. |  |
-| **Disable Login Requirement** | Removes login requirement and FTUX paywall screens. |  |
-| **Remove Shared User ID** | Removes the sharedUserId attribute from the manifest to prevent installation conflicts. |  |
-| **Unlock 365 Family** | Unlocks Microsoft 365 Family subscription features locally. |  |
 
 </details>
 
