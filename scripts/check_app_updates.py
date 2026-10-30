@@ -95,23 +95,6 @@ APP_SPECS: List[Dict[str, Any]] = [
         },
     },
     {
-        "id": "powerpoint",
-        "name": "PowerPoint",
-        "package_name": "com.microsoft.office.powerpoint",
-        "constant_key": "POWERPOINT_TARGET_VERSION",
-        "run_patch_test_id": "powerpoint",
-        "source_type": "apkmirror",
-        "source_name": "APKMirror",
-        "source_url": "https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/",
-        "path_prefix": "/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-",
-        "allow_beta": False,
-        "variant_match": {
-            "arch": "arm64-v8a",
-            "dpi": "120-480dpi",
-            "type": "BUNDLE",
-        },
-    },
-    {
         "id": "word",
         "name": "Word",
         "package_name": "com.microsoft.office.word",

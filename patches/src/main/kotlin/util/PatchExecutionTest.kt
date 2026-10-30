@@ -72,18 +72,6 @@ enum class TargetApp(
         patchDirectoryPart = "moovit",
         referenceSha256 = Constants.MOOVIT_INPUT_SHA256,
     ),
-    POWERPOINT(
-        id = "powerpoint",
-        appName = "PowerPoint",
-        packageName = Constants.POWERPOINT_PACKAGE_NAME,
-        candidateFilenames = listOf(
-            "com.microsoft.office.powerpoint_16.0.20527.20034-2005437911_6dpi_24lang_ceed622e984560b84797e53e8db5221e_apkmirror.com.apkm",
-            "powerpoint_${Constants.POWERPOINT_TARGET_VERSION}.apkm"
-        ),
-        filePattern = Regex("(?i).*powerpoint.*\\.(?:apk|apkm|xapk)$"),
-        patchDirectoryPart = "powerpoint",
-        referenceSha256 = Constants.POWERPOINT_INPUT_SHA256,
-    ),
     CAPCUT(
         id = "capcut",
         appName = "CapCut",
