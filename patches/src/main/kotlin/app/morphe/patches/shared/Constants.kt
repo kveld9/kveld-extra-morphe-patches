@@ -49,8 +49,8 @@ object Constants {
     )
 
     const val TWITTER_PACKAGE_NAME = "com.twitter.android"
-    const val TWITTER_TARGET_VERSION = "12.37.2-prod.01"
-    const val TWITTER_INPUT_SHA256 = "96cf1742acfd28a70fd8dc1e6603cc4d00bbc3925abcfe1d086235c525a8e75d"
+    const val TWITTER_TARGET_VERSION = "12.39.0-prod.01"
+    const val TWITTER_INPUT_SHA256 = "94632829a59da586bbef2d2e15f4d8e3582bf7a69a178ad64bd1d98fda41d580"
 
     val COMPATIBILITY_TWITTER = Compatibility(
         name = "X",
@@ -60,7 +60,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = TWITTER_TARGET_VERSION,
-                description = "Download com.twitter.android v$TWITTER_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 312372001 (BUNDLE 35 S) from APKMirror",
+                description = "Download com.twitter.android v$TWITTER_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 312390001 (BUNDLE 35 S) from APKMirror",
             )
         )
     )
