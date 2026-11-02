@@ -32,8 +32,8 @@ import app.morphe.patcher.patch.Compatibility
  */
 object Constants {
     const val INSTAGRAM_PACKAGE_NAME = "com.instagram.android"
-    const val INSTAGRAM_TARGET_VERSION = "447.0.0.55.81"
-    const val INSTAGRAM_INPUT_SHA256 = "b3075e2bb88b14ced55399b825b884b5d90c9945096833fbb0e4a2befd16ebad"
+    const val INSTAGRAM_TARGET_VERSION = "452.1.0.53.64"
+    const val INSTAGRAM_INPUT_SHA256 = "8575bb673c5a26ee4e7ab63f852be2f2f0faed40a73d8a373316d057425351a9"
 
     val COMPATIBILITY_INSTAGRAM = Compatibility(
         name = "Instagram",
@@ -43,7 +43,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = INSTAGRAM_TARGET_VERSION,
-                description = "Download com.instagram.android v$INSTAGRAM_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 385311891 (BUNDLE3 S) from APKMirror",
+                description = "Download com.instagram.android v$INSTAGRAM_TARGET_VERSION (APKM) arm64-v8a 480-640dpi versionCode 385811006 from APKMirror",
             )
         )
     )
