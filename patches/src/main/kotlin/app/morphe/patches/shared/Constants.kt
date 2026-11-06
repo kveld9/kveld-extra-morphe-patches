@@ -66,8 +66,8 @@ object Constants {
     )
 
     const val MOOVIT_PACKAGE_NAME = "com.tranzmate"
-    const val MOOVIT_TARGET_VERSION = "5.203.0.1812"
-    const val MOOVIT_INPUT_SHA256 = "d0a819ca0c5512612a38a88db0664963ef9da89222d058ae9b42682462e5524c"
+    const val MOOVIT_TARGET_VERSION = "5.204.0.1813"
+    const val MOOVIT_INPUT_SHA256 = "2d2ef5e75710b3fd16a97def4ff84a263c9446ce929b693a80f02994ba31ab7a"
 
     val COMPATIBILITY_MOOVIT = Compatibility(
         name = "Moovit",
@@ -77,7 +77,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = MOOVIT_TARGET_VERSION,
-                description = "Download com.tranzmate v$MOOVIT_TARGET_VERSION (APKM) arm64-v8a 160-640dpi versionCode 1812 (BUNDLE 31 S) from APKMirror",
+                description = "Download com.tranzmate v$MOOVIT_TARGET_VERSION (APKM) arm64-v8a 160-640dpi versionCode 1813 (BUNDLE 31 S) from APKMirror",
             )
         )
     )
