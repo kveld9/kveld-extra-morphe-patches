@@ -630,6 +630,32 @@ def extract_apkpure_version(html: str) -> Optional[str]:
     return None
 
 
+def extract_apkpure_versions(html: str, package_name: str) -> List[str]:
+    """Collect every downloadable version of a package referenced by an APKPure page.
+
+    Used when the version on the page's main download button belongs to an
+    abandoned line: the remaining download links still name real artifacts.
+    """
+    pattern = rf"/{re.escape(package_name)}/download/([A-Za-z0-9._-]+)"
+    versions: List[str] = []
+    for raw in re.findall(pattern, html):
+        candidate = raw.strip()
+        if candidate and parse_version(candidate)[0]:
+            versions.append(candidate)
+    return versions
+
+
+def newest_unignored_version(
+    candidates: List[str],
+    patterns: Optional[List[str]],
+) -> Optional[str]:
+    """Select the highest candidate version that matches no ignore pattern."""
+    valid = [v for v in candidates if not is_version_ignored(v, patterns)]
+    if not valid:
+        return None
+    return max(valid, key=lambda v: parse_version(v)[0])
+
+
 def _normalize_github_tag(tag: str, allow_beta: bool) -> Optional[str]:
     """Normalize GitHub release tag to version string if valid and allowed."""
     if not allow_beta and re.search(r"\b(beta|alpha|preview|rc)\d*\b", tag, re.I):
@@ -715,7 +741,14 @@ def run_update_checks(
 
         ignore_patterns = spec.get("version_ignore_patterns")
         if remote_version and is_version_ignored(remote_version, ignore_patterns):
+            # A newest entry on an abandoned line must not hide the real current
+            # version; fall back to the newest downloadable version that is kept.
             remote_version = None
+            if source_type == "apkpure" and html:
+                remote_version = newest_unignored_version(
+                    extract_apkpure_versions(html, package_name),
+                    ignore_patterns,
+                )
 
         if not remote_version:
             status = "unknown"
@@ -1155,6 +1188,34 @@ class TestUpdateChecker(unittest.TestCase):
             xiaomi_live = next(r for r in live_results if r["id"] == "xiaomi-earbuds")
             self.assertEqual(xiaomi_live["status"], "update-available")
             self.assertEqual(xiaomi_live["remote_version"], "1.39.0")
+
+            # Phantom main button plus real 1.x download links must resolve to the
+            # newest kept version instead of reporting unknown forever.
+            mixed_html = """
+            <html>
+              <body>
+                <a class="btn normal-download-btn da dt-main-download-btn"
+                   data-dt-package_name="com.mi.earphone"
+                   data-dt-version="9.0.278"
+                   href="https://apkpure.com/xiaomi-earbuds/com.mi.earphone/download"
+                   title="Download Xiaomi Earbuds latest version apk">
+                  <strong class="text one-line">Download APK (20 MB)</strong>
+                </a>
+                <a href="/com.mi.earphone/download/1.38.0i">1.38.0i</a>
+                <a href="/com.mi.earphone/download/1.39.0i">1.39.0i</a>
+              </body>
+            </html>
+            """
+
+            def fake_fetch_mixed(url: str) -> Optional[str]:
+                if "com.mi.earphone" in url:
+                    return mixed_html
+                return None
+
+            mixed_results = run_update_checks(temp_constants, fetch_fn=fake_fetch_mixed)
+            xiaomi_mixed = next(r for r in mixed_results if r["id"] == "xiaomi-earbuds")
+            self.assertEqual(xiaomi_mixed["remote_version"], "1.39.0i")
+            self.assertEqual(xiaomi_mixed["status"], "update-available")
 
     def test_is_version_ignored(self) -> None:
         """Verify version ignore pattern matching."""
