@@ -254,8 +254,8 @@ def parse_constants(constants_path: Path) -> Dict[str, str]:
         return {}
 
     content = constants_path.read_text(encoding="utf-8")
-    pattern = r'const\s+val\s+([A-Z0-9_]+_TARGET_VERSION)\s*=\s*"([^"]+)"'
-    return dict(re.findall(pattern, content))
+    pattern = r'^\s*const\s+val\s+([A-Z0-9_]+_TARGET_VERSION)\s*=\s*"([^"]+)"'
+    return dict(re.findall(pattern, content, re.MULTILINE))
 
 
 def parse_version(v_str: str) -> Tuple[Tuple[int, ...], str]:
@@ -883,6 +883,28 @@ class TestUpdateChecker(unittest.TestCase):
         )
         self.assertEqual(ver, "5.201.1.1809")
 
+    def test_apkmirror_extraction_ibispaint(self) -> None:
+        """Verify APKMirror extracts IbisPaint X release version using its path prefix."""
+        fixture_html = """
+        <div>
+          <a class="fontBlack" href="/apk/ibis-inc/ibispaint-x/ibis-paint-x-14-1-3-beta-release/">
+            ibis Paint X 14.1.3 beta
+          </a>
+          <a class="fontBlack" href="/apk/ibis-inc/ibispaint-x/ibis-paint-x-14-1-2-release/">
+            ibis Paint X 14.1.2
+          </a>
+          <a class="fontBlack" href="/apk/other-dev/other-app/other-release/">
+            Other App 1.0.0
+          </a>
+        </div>
+        """
+        ver = extract_apkmirror_version(
+            fixture_html,
+            path_prefix="/apk/ibis-inc/ibispaint-x/ibis-paint-x-",
+            allow_beta=False,
+        )
+        self.assertEqual(ver, "14.1.2")
+
     def test_apkpure_extraction_newer_download_version(self) -> None:
         """Verify APKPure extracts newer downloadable version from download button."""
         fixture_html = """
@@ -1355,6 +1377,32 @@ class TestUpdateChecker(unittest.TestCase):
             "",
         )
         self.assertNotIn("Direct download:", body_without_dl)
+
+    def test_all_target_constants_have_app_specs(self) -> None:
+        """Verify all target version constants in Constants.kt have matching APP_SPECS entries."""
+        path = resolve_default_constants_path()
+        constants = parse_constants(path)
+        target_keys = [k for k in constants.keys() if k.endswith("_TARGET_VERSION")]
+        self.assertTrue(len(target_keys) > 0, "Expected at least one target version constant")
+
+        specs_by_constant = {spec["constant_key"]: spec for spec in APP_SPECS}
+        for key in target_keys:
+            self.assertIn(
+                key,
+                specs_by_constant,
+                f"Constant {key} in Constants.kt missing corresponding entry in APP_SPECS",
+            )
+            spec = specs_by_constant[key]
+            self.assertTrue(spec.get("id"), f"Spec for {key} has empty or missing id")
+            self.assertEqual(spec.get("constant_key"), key)
+            self.assertTrue(
+                spec.get("source_type"),
+                f"Spec for {key} has empty or missing source_type",
+            )
+            self.assertTrue(
+                spec.get("source_url"),
+                f"Spec for {key} has empty or missing source_url",
+            )
 
 
 
