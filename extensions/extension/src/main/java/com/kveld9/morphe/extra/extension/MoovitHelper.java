@@ -106,9 +106,28 @@ public class MoovitHelper {
     }
 
     private static boolean isPackageInfoCall(Method method, Object[] args) {
-        if (pkg == null || args == null || args.length == 0 || !pkg.equals(args[0])) return false;
+        if (pkg == null || args == null || args.length == 0 || args[0] == null) return false;
         if (!PackageInfo.class.isAssignableFrom(method.getReturnType())) return false;
-        return method.getName().contains("PackageInfo");
+        if (!method.getName().contains("PackageInfo")) return false;
+        String requestedPkg = extractPackageName(args[0]);
+        return pkg.equals(requestedPkg);
+    }
+
+    private static String extractPackageName(Object obj) {
+        if (obj instanceof String) {
+            return (String) obj;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (obj instanceof android.content.pm.VersionedPackage) {
+                return ((android.content.pm.VersionedPackage) obj).getPackageName();
+            }
+        }
+        try {
+            Method m = obj.getClass().getMethod("getPackageName");
+            Object res = m.invoke(obj);
+            if (res instanceof String) return (String) res;
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     private static Object invokeTarget(Object target, Method method, Object[] args) throws Throwable {
