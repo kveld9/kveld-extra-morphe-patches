@@ -4,6 +4,7 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.ensureRegisterCount
 
 @Suppress("unused")
 val xiaomiEarbudsDisablePromosAndNagsPatch = bytecodePatch(
@@ -147,6 +148,7 @@ val xiaomiEarbudsDisablePromosAndNagsPatch = bytecodePatch(
             parameters = listOf(),
             returnType = "Ljava/lang/String;",
         ).method.apply {
+            ensureRegisterCount(3)
             addInstructions(
                 0,
                 """
@@ -242,6 +244,7 @@ val xiaomiEarbudsDisablePromosAndNagsPatch = bytecodePatch(
             parameters = listOf(),
             returnType = "V",
         ).method.apply {
+            ensureRegisterCount(3)
             addInstructions(
                 0,
                 """

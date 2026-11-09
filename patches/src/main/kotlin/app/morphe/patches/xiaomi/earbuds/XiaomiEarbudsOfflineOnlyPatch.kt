@@ -5,6 +5,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.ensureRegisterCount
 import org.w3c.dom.Element
 
 private val xiaomiEarbudsOfflineManifestResourcePatch = resourcePatch(
@@ -296,6 +297,7 @@ val xiaomiEarbudsOfflineOnlyPatch = bytecodePatch(
             parameters = listOf("Ljava/lang/String;"),
             returnType = "Ljava/util/List;",
         ).method.apply {
+            ensureRegisterCount(2)
             addInstructions(
                 0,
                 """
