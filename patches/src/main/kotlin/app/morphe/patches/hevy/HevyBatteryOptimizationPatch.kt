@@ -19,8 +19,7 @@ private val hevyBatteryResourcePatch = resourcePatch(
     execute {
         val manifestFile = get("AndroidManifest.xml")
         if (!manifestFile.exists()) {
-            println("[Stop Background Sync] AndroidManifest.xml not found - skipping component neutralization.")
-            return@execute
+            error("[Stop Background Sync] AndroidManifest.xml not found.")
         }
 
         val disabledComponents = setOf(

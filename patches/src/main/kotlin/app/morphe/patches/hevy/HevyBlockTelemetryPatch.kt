@@ -18,8 +18,7 @@ private val hevyTelemetryResourcePatch = resourcePatch(
     execute {
         val manifestFile = get("AndroidManifest.xml")
         if (!manifestFile.exists()) {
-            println("[Block Trackers] AndroidManifest.xml not found - skipping manifest purge.")
-            return@execute
+            error("[Block Trackers] AndroidManifest.xml not found.")
         }
 
         val blockedPermissions = setOf(
