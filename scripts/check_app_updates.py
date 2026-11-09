@@ -36,7 +36,7 @@ APP_SPECS: List[Dict[str, Any]] = [
     #     "name": "My App",                         # 2. Display name shown in logs, issue titles, and alerts
     #     "package_name": "com.example.app",        # 3. Android application package name
     #     "constant_key": "MY_APP_TARGET_VERSION",  # 4. Target version constant defined in Constants.kt
-    #     "source_type": "apkpure",                 # 5. Upstream host type: "apkpure", "apkmirror", or "github"
+    #     "source_type": "apkpure",                 # 5. Upstream host type: "apkpure", "apkmirror", "uptodown" or "github"
     #     "source_name": "APKPure",                 # 6. Display name of upstream host, must match the entry's source
     #     "source_url": "https://apkpure.com/slug/com.example.app",  # 7. Canonical listing URL (HTTP 200 verified live)
     #     "allow_beta": False,                      # Pre-release filter (typically False for stable patch releases)
@@ -174,20 +174,21 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://github.com/d4rken-org/sdmaid-se/releases",
         "allow_beta": True,
     },
-    # Upstream source divergence: Version monitoring uses APKMirror HTML scraping
-    # because APKPure lacks stable, unauthenticated endpoints for programmatic checks.
-    # Patch candidate packages must be sourced as XAPK bundles from APKPure because
-    # APKMirror downloads return HTTP 451 (legal restriction) in multiple regions.
+    # Upstream source divergence: APKMirror no longer serves this app (HTTP 451
+    # with a "Page Not Found" body) and APKPure returns HTTP 410, so both hosts
+    # can never report a version. Uptodown publishes the current version on the
+    # app page. Patch candidate packages must still be sourced as XAPK bundles
+    # from APKPure because APKMirror downloads return HTTP 451 (legal
+    # restriction) in multiple regions.
     {
         "id": "ibispaint",
         "name": "IbisPaint X",
         "package_name": "jp.ne.ibis.ibispaintx.app",
         "constant_key": "IBIS_PAINT_TARGET_VERSION",
         "run_patch_test_id": "ibispaint",
-        "source_type": "apkmirror",
-        "source_name": "APKMirror",
-        "source_url": "https://www.apkmirror.com/apk/ibis-inc/ibispaint-x/",
-        "path_prefix": "/apk/ibis-inc/ibispaint-x/ibis-paint-x-",
+        "source_type": "uptodown",
+        "source_name": "Uptodown",
+        "source_url": "https://ibispaint-x.en.uptodown.com/android",
         "allow_beta": False,
     },
 ]
@@ -656,6 +657,29 @@ def newest_unignored_version(
     return max(valid, key=lambda v: parse_version(v)[0])
 
 
+def extract_uptodown_version(html: str) -> Optional[str]:
+    """Extract the current version from an Uptodown app page.
+
+    Host: Uptodown (https://<app>.en.uptodown.com/android)
+    Precedence: version label rendered next to the app name on the app page.
+    Fixture test: test_uptodown_extraction
+    """
+    if not html:
+        return None
+
+    match = re.search(
+        r'<div[^>]*class="[^"]*\bversion\b[^"]*"[^>]*>\s*([^<\s]+)\s*</div>',
+        html,
+        re.I,
+    )
+    if not match:
+        return None
+
+    v_cand = match.group(1).strip()
+    core, _ = parse_version(v_cand)
+    return v_cand if core else None
+
+
 def _normalize_github_tag(tag: str, allow_beta: bool) -> Optional[str]:
     """Normalize GitHub release tag to version string if valid and allowed."""
     if not allow_beta and re.search(r"\b(beta|alpha|preview|rc)\d*\b", tag, re.I):
@@ -707,6 +731,7 @@ def run_update_checks(
         source_name = spec.get("source_name") or {
             "apkmirror": "APKMirror",
             "apkpure": "APKPure",
+            "uptodown": "Uptodown",
             "github": "GitHub",
         }.get(source_type, source_type.title())
         source_url = spec["source_url"]
@@ -736,6 +761,8 @@ def run_update_checks(
                 # APKPure variant resolution is omitted: APKPure download endpoints serve
                 # dynamic tokens / redirects without stable per-variant release tables.
                 remote_version = extract_apkpure_version(html)
+            elif source_type == "uptodown":
+                remote_version = extract_uptodown_version(html)
             elif source_type == "github":
                 remote_version = extract_github_version(html, allow_beta=allow_beta)
 
@@ -916,27 +943,24 @@ class TestUpdateChecker(unittest.TestCase):
         )
         self.assertEqual(ver, "5.201.1.1809")
 
-    def test_apkmirror_extraction_ibispaint(self) -> None:
-        """Verify APKMirror extracts IbisPaint X release version using its path prefix."""
+    def test_uptodown_extraction(self) -> None:
+        """Verify Uptodown extracts the current version label and rejects missing data."""
         fixture_html = """
-        <div>
-          <a class="fontBlack" href="/apk/ibis-inc/ibispaint-x/ibis-paint-x-14-1-3-beta-release/">
-            ibis Paint X 14.1.3 beta
+        <div class="info">
+          <a href="https://ibispaint-x.en.uptodown.com/android">
+            <h1 id="detail-app-name">ibis Paint X</h1>
           </a>
-          <a class="fontBlack" href="/apk/ibis-inc/ibispaint-x/ibis-paint-x-14-1-2-release/">
-            ibis Paint X 14.1.2
-          </a>
-          <a class="fontBlack" href="/apk/other-dev/other-app/other-release/">
-            Other App 1.0.0
-          </a>
+          <div class="version">14.1.5</div>
+          <div class="autor">ibis inc.</div>
         </div>
+        <div class="version">14.0.0</div>
         """
-        ver = extract_apkmirror_version(
-            fixture_html,
-            path_prefix="/apk/ibis-inc/ibispaint-x/ibis-paint-x-",
-            allow_beta=False,
+        self.assertEqual(extract_uptodown_version(fixture_html), "14.1.5")
+
+        self.assertIsNone(extract_uptodown_version(""))
+        self.assertIsNone(
+            extract_uptodown_version('<div class="version">unknown</div>')
         )
-        self.assertEqual(ver, "14.1.2")
 
     def test_apkpure_extraction_newer_download_version(self) -> None:
         """Verify APKPure extracts newer downloadable version from download button."""
