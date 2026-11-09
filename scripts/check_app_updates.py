@@ -1462,6 +1462,15 @@ def main() -> int:
         out_path.write_text(json.dumps(report_data, indent=2), encoding="utf-8")
         print(f"[INFO] Saved JSON report to {args.json_path}")
 
+    unresolved = [entry["name"] for entry in results if entry["status"] == "unknown"]
+    if unresolved:
+        print(
+            "[ERROR] Upstream version could not be determined for: "
+            f"{', '.join(unresolved)}",
+            file=sys.stderr,
+        )
+        return 1
+
     return 0
 
 
