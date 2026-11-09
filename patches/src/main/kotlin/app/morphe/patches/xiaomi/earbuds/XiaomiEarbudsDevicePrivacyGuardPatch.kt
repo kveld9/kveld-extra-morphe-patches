@@ -7,7 +7,7 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.replaceWithReturnBoolean
 import app.morphe.patches.shared.replaceWithReturnNull
-import org.w3c.dom.Element
+import app.morphe.patches.shared.stripPermissionsWhere
 
 private val xiaomiEarbudsDevicePrivacyGuardResourcePatch = resourcePatch(
     name = "Device Privacy Guard (Setup)",
@@ -30,19 +30,7 @@ private val xiaomiEarbudsDevicePrivacyGuardResourcePatch = resourcePatch(
 
         var removedPermissions = 0
         document(manifestFile.absolutePath).use { doc ->
-            val usesPermissions = doc.getElementsByTagName("uses-permission")
-            val permsToRemove = mutableListOf<Element>()
-            for (i in 0 until usesPermissions.length) {
-                val elem = usesPermissions.item(i) as? Element ?: continue
-                val name = elem.getAttribute("android:name")
-                if (name in blockedPermissions) {
-                    permsToRemove.add(elem)
-                }
-            }
-            permsToRemove.forEach {
-                it.parentNode?.removeChild(it)
-                removedPermissions++
-            }
+            removedPermissions = doc.documentElement.stripPermissionsWhere { it in blockedPermissions }.size
         }
 
         println("[Device Privacy Guard (Setup)] Stripped $removedPermissions location permissions from AndroidManifest.xml.")
