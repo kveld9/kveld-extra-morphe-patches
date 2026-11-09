@@ -43,8 +43,8 @@ enum class TargetApp(
         appName = "Instagram",
         packageName = Constants.INSTAGRAM_PACKAGE_NAME,
         candidateFilenames = listOf(
-            "com.instagram.android_447.0.0.55.81-385311895_1dpi_af3be75e29a3de479232e9e7978c0003_apkmirror.com.apkm",
-            "instagram_${Constants.INSTAGRAM_TARGET_VERSION}.apkm"
+            "com.instagram.android_${Constants.INSTAGRAM_TARGET_VERSION}.apkm",
+            "instagram_${Constants.INSTAGRAM_TARGET_VERSION}.apkm",
         ),
         filePattern = Regex("(?i).*instagram.*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "instagram",
@@ -77,8 +77,8 @@ enum class TargetApp(
         appName = "CapCut",
         packageName = Constants.CAPCUT_PACKAGE_NAME,
         candidateFilenames = listOf(
-            "com.lemon.lvoverseas_19.9.0-19900002_minAPI23(arm64-v8a,armeabi-v7a)(nodpi)_apkmirror.com.apk",
-            "capcut_${Constants.CAPCUT_TARGET_VERSION}.apk"
+            "com.lemon.lvoverseas_${Constants.CAPCUT_TARGET_VERSION}.apk",
+            "capcut_${Constants.CAPCUT_TARGET_VERSION}.apk",
         ),
         filePattern = Regex("(?i).*(?:capcut|lemon\\.lvoverseas).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "capcut",
@@ -151,7 +151,7 @@ enum class TargetApp(
         appName = "SD Maid SE",
         packageName = Constants.SDMSE_PACKAGE_NAME,
         candidateFilenames = listOf(
-            "eu.darken.sdmse_2.2.2.apk",
+            "eu.darken.sdmse_${Constants.SDMSE_TARGET_VERSION}.apk",
             "sdmse_${Constants.SDMSE_TARGET_VERSION}.apk",
         ),
         filePattern = Regex("(?i).*(?:sdmse|sdmaid).*\\.(?:apk|apkm|xapk)$"),
