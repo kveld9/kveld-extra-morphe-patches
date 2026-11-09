@@ -100,8 +100,8 @@ object Constants {
     )
 
     const val HEVY_PACKAGE_NAME = "com.hevy"
-    const val HEVY_TARGET_VERSION = "3.2.2"
-    const val HEVY_INPUT_SHA256 = "a2b94d9b451b7a3d1c3916df5d57cdf10d90659acd1945966405e192507cbe92"
+    const val HEVY_TARGET_VERSION = "3.2.5"
+    const val HEVY_INPUT_SHA256 = "b2459affe384f42401791c95b5fee119e46257d1eda2d0c57a5ad6b33a777e07"
 
     val COMPATIBILITY_HEVY = Compatibility(
         name = "Hevy - Gym Log Workout Tracker",
@@ -111,7 +111,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = HEVY_TARGET_VERSION,
-                description = "Download com.hevy v$HEVY_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 3308730 (BUNDLE) from APKMirror",
+                description = "Download com.hevy v$HEVY_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 3431793 (BUNDLE) from APKMirror",
             )
         )
     )
