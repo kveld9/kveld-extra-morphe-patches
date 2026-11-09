@@ -4,6 +4,7 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.ensureRegisterCount
 import com.android.tools.smali.dexlib2.AccessFlags
 
 private object WatermarkBusinessFunctionB4Fingerprint : Fingerprint(
@@ -74,6 +75,7 @@ val capcutRemoveWatermarkPatch = bytecodePatch(
         var patched = 0
 
         fun forceTrue(fp: Fingerprint) {
+            fp.method.ensureRegisterCount(1)
             fp.method.addInstructions(
                 0,
                 """
@@ -85,6 +87,7 @@ val capcutRemoveWatermarkPatch = bytecodePatch(
         }
 
         fun forceFalse(fp: Fingerprint) {
+            fp.method.ensureRegisterCount(1)
             fp.method.addInstructions(
                 0,
                 """

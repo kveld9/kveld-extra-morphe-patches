@@ -5,6 +5,7 @@ import com.android.tools.smali.dexlib2.AccessFlags
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.ensureRegisterCount
 
 private object TemplateExportUltraHdUtilsCFingerprint : Fingerprint(
     definingClass = "Lcom/vega/edit/base/utils/TemplateExportUltraHdUtils;",
@@ -58,6 +59,7 @@ val capcutUnlockExportPatch = bytecodePatch(
         var patched = 0
 
         fun forceTrue(fp: Fingerprint) {
+            fp.method.ensureRegisterCount(1)
             fp.method.addInstructions(
                 0,
                 """
