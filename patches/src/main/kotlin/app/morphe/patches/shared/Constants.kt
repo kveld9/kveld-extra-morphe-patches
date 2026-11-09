@@ -101,7 +101,7 @@ object Constants {
 
     const val HEVY_PACKAGE_NAME = "com.hevy"
     const val HEVY_TARGET_VERSION = "3.2.2"
-    const val HEVY_INPUT_SHA256 = ""
+    const val HEVY_INPUT_SHA256 = "a2b94d9b451b7a3d1c3916df5d57cdf10d90659acd1945966405e192507cbe92"
 
     val COMPATIBILITY_HEVY = Compatibility(
         name = "Hevy - Gym Log Workout Tracker",
@@ -118,7 +118,7 @@ object Constants {
 
     const val NOKOPRINT_PACKAGE_NAME = "com.nokoprint"
     const val NOKOPRINT_TARGET_VERSION = "5.28.8"
-    const val NOKOPRINT_INPUT_SHA256 = ""
+    const val NOKOPRINT_INPUT_SHA256 = "99eae16361f290a750ba317a9e5abc7b5701f1eb08652417e3fc643698e46a52"
 
     val COMPATIBILITY_NOKOPRINT = Compatibility(
         name = "NokoPrint - WiFi, Bluetooth, USB",
@@ -135,7 +135,7 @@ object Constants {
 
     const val XIAOMI_EARBUDS_PACKAGE_NAME = "com.mi.earphone"
     const val XIAOMI_EARBUDS_TARGET_VERSION = "1.38.0i"
-    const val XIAOMI_EARBUDS_INPUT_SHA256 = ""
+    const val XIAOMI_EARBUDS_INPUT_SHA256 = "cf0f1e7ed1e02d3a76ddaa81110ea385415a4ad5bd4aa41fca38b9da33cf8b85"
 
     val COMPATIBILITY_XIAOMI_EARBUDS = Compatibility(
         name = "Xiaomi Earbuds",
@@ -152,7 +152,7 @@ object Constants {
 
     const val SUBE_PACKAGE_NAME = "com.sube.app"
     const val SUBE_TARGET_VERSION = "2.7.25"
-    const val SUBE_INPUT_SHA256 = ""
+    const val SUBE_INPUT_SHA256 = "87484f3c3f89b79883f9a842f2871ac3a9670d04143e3378d9c4dcf4cc20cad9"
 
     val COMPATIBILITY_SUBE = Compatibility(
         name = "SUBE",
@@ -169,7 +169,7 @@ object Constants {
 
     const val SDMSE_PACKAGE_NAME = "eu.darken.sdmse"
     const val SDMSE_TARGET_VERSION = "2.2.2-rc0"
-    const val SDMSE_INPUT_SHA256 = ""
+    const val SDMSE_INPUT_SHA256 = "11b5b9084c27ab3b30db47c92f403129244c178e81e07c0bb0ffbb64a9bb1bb6"
 
     val COMPATIBILITY_SDMSE = Compatibility(
         name = "SD Maid SE",
@@ -186,7 +186,7 @@ object Constants {
 
     const val IBIS_PAINT_PACKAGE_NAME = "jp.ne.ibis.ibispaintx.app"
     const val IBIS_PAINT_TARGET_VERSION = "14.1.2"
-    const val IBIS_PAINT_INPUT_SHA256 = ""
+    const val IBIS_PAINT_INPUT_SHA256 = "7c52acb5d784eef2d4b9f39c4f83829a5d0ff99cc36d9e23626330be4f55ff12"
 
     val COMPATIBILITY_IBIS_PAINT = Compatibility(
         name = "IbisPaint X",
