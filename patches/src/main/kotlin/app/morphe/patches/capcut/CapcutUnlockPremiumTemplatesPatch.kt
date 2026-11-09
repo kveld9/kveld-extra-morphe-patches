@@ -2,6 +2,7 @@ package app.morphe.patches.capcut
 
 import app.morphe.patcher.Fingerprint
 import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
@@ -12,6 +13,11 @@ private object CutSamePurchaseViewModelU6Fingerprint : Fingerprint(
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    custom = { method, _ ->
+        val instructions = method.implementation?.instructions ?: emptyList()
+        instructions.any { (it as? ReferenceInstruction)?.reference.toString().contains("IGeneralTemplatePaidExportFunction") } &&
+            instructions.none { (it as? ReferenceInstruction)?.reference.toString().contains("IBusinessTemplateExportFunction") }
+    },
 )
 
 private object CutSamePurchaseViewModelX6Fingerprint : Fingerprint(
@@ -20,6 +26,11 @@ private object CutSamePurchaseViewModelX6Fingerprint : Fingerprint(
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any {
+            (it as? ReferenceInstruction)?.reference.toString().contains("IBusinessTemplateExportFunction")
+        } == true
+    },
 )
 
 private object CutSamePurchaseViewModelW6Fingerprint : Fingerprint(
@@ -28,6 +39,11 @@ private object CutSamePurchaseViewModelW6Fingerprint : Fingerprint(
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any {
+            (it as? ReferenceInstruction)?.reference.toString().contains("BeautyConfig")
+        } == true
+    },
 )
 
 private object CutSamePurchaseViewModelZ6Fingerprint : Fingerprint(
@@ -36,6 +52,11 @@ private object CutSamePurchaseViewModelZ6Fingerprint : Fingerprint(
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any {
+            (it as? ReferenceInstruction)?.reference.toString().contains("isPaidExportTemplate")
+        } == true
+    },
 )
 
 private object CutSamePurchaseViewModelA6Fingerprint : Fingerprint(
@@ -44,6 +65,11 @@ private object CutSamePurchaseViewModelA6Fingerprint : Fingerprint(
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any {
+            (it as? ReferenceInstruction)?.reference.toString().contains("CommerceRewardAdInfo")
+        } == true
+    },
 )
 
 @Suppress("unused")
