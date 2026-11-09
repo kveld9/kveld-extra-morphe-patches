@@ -7,6 +7,5 @@ android {
 }
 
 dependencies {
-    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
+    implementation(libs.hiddenapibypass)
 }
-
