@@ -82,4 +82,4 @@ Run any subsequent `unzip` or `strings` inspection against `scratch/base.apk`.
 
 ## Release
 
-Releases run manually through the `Release` workflow (`workflow_dispatch`). semantic-release derives the version from Conventional Commits since the last tag and publishes the `.mpp` to GitHub Releases.
+Releases trigger automatically on push to `main`, or manually through the `Release` workflow (`workflow_dispatch`). semantic-release derives the version from Conventional Commits since the last tag and publishes the `.mpp` to GitHub Releases.
