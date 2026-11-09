@@ -340,8 +340,7 @@ private fun replaceStringLiteralsInMethod(
         val ref = (instruction as? ReferenceInstruction)?.reference as? StringReference ?: continue
         if (ref.string in targetStrings) {
             val register = (instruction as? OneRegisterInstruction)?.registerA ?: continue
-            val op = if (register > 255) "const-string/jumbo" else "const-string"
-            method.replaceInstruction(index, "$op v$register, \"${replacementString.replace("\"", "\\\"")}\"")
+            method.replaceInstruction(index, "const-string v$register, \"${replacementString.replace("\"", "\\\"")}\"")
             count++
         }
     }
