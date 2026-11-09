@@ -1,9 +1,9 @@
 package app.morphe.patches.capcut
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.replaceWithReturnBoolean
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 
@@ -160,31 +160,34 @@ val capcutUnlockPremiumPatch = bytecodePatch(
     execute {
         var patched = 0
 
-        fun forceTrue(fp: Fingerprint) {
-            fp.method.addInstructions(
-                0,
-                """
-                    const/4 v0, 0x1
-                    return v0
-                """,
-            )
-            patched++
-        }
-
-        forceTrue(SubscribeImplIsVipFingerprint)
-        forceTrue(PayVipImplIsVipFingerprint)
-        forceTrue(UserVipInfoIsVipUserFingerprint)
-        forceTrue(UserVipInfoGetFlagFingerprint)
-        forceTrue(UserDetailInfoIsVipUserFingerprint)
-        forceTrue(UserDetailInfoGetFlagFingerprint)
-        forceTrue(VipUserServiceImplIsVipFingerprint)
-        forceTrue(SubscribeCloudImplIsVipFingerprint)
-        forceTrue(BusinessManagerBFingerprint)
-        forceTrue(BusinessManagerYFingerprint)
-        forceTrue(BusinessManagerXFingerprint)
-        forceTrue(BusinessManagerVFingerprint)
-        forceTrue(BusinessManagerAFingerprint)
-        forceTrue(BusinessManagerTFingerprint)
+        SubscribeImplIsVipFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        PayVipImplIsVipFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        UserVipInfoIsVipUserFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        UserVipInfoGetFlagFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        UserDetailInfoIsVipUserFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        UserDetailInfoGetFlagFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        VipUserServiceImplIsVipFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        SubscribeCloudImplIsVipFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        BusinessManagerBFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        BusinessManagerYFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        BusinessManagerXFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        BusinessManagerVFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        BusinessManagerAFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        BusinessManagerTFingerprint.method.replaceWithReturnBoolean(true)
+        patched++
 
         println("[Unlock Premium] Applied $patched hooks -> VIP gates forced to true.")
     }

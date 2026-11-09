@@ -8,6 +8,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants.COMPATIBILITY_MOOVIT
+import app.morphe.patches.shared.replaceWithReturnVoid
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
@@ -94,7 +95,7 @@ val moovitSuppressPaywallsPatch = bytecodePatch(
         patched++
 
         // 3. Help center menu item -> suppress view setup
-        moovitPlusHelpCenterMenuItemFingerprint.method.addInstructions(0, "return-void")
+        moovitPlusHelpCenterMenuItemFingerprint.method.replaceWithReturnVoid()
         patched++
 
         // 4. Plus menu item -> set GONE

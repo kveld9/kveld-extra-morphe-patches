@@ -3,9 +3,9 @@ package app.morphe.patches.capcut
 import app.morphe.patcher.Fingerprint
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.replaceWithReturnBoolean
 
 private object CutSamePurchaseViewModelU6Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/libcutsame/viewmodel/CutSamePurchaseViewModel;",
@@ -83,33 +83,16 @@ val capcutUnlockPremiumTemplatesPatch = bytecodePatch(
     execute {
         var patched = 0
 
-        fun forceTrue(fp: Fingerprint) {
-            fp.method.addInstructions(
-                0,
-                """
-                    const/4 v0, 0x1
-                    return v0
-                """,
-            )
-            patched++
-        }
-
-        fun forceFalse(fp: Fingerprint) {
-            fp.method.addInstructions(
-                0,
-                """
-                    const/4 v0, 0x0
-                    return v0
-                """,
-            )
-            patched++
-        }
-
-        forceTrue(CutSamePurchaseViewModelU6Fingerprint)
-        forceTrue(CutSamePurchaseViewModelX6Fingerprint)
-        forceTrue(CutSamePurchaseViewModelW6Fingerprint)
-        forceFalse(CutSamePurchaseViewModelZ6Fingerprint)
-        forceFalse(CutSamePurchaseViewModelA6Fingerprint)
+        CutSamePurchaseViewModelU6Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        CutSamePurchaseViewModelX6Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        CutSamePurchaseViewModelW6Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        CutSamePurchaseViewModelZ6Fingerprint.method.replaceWithReturnBoolean(false)
+        patched++
+        CutSamePurchaseViewModelA6Fingerprint.method.replaceWithReturnBoolean(false)
+        patched++
 
         println("[Unlock Premium Templates] Applied $patched hooks -> premium template flags enabled.")
     }

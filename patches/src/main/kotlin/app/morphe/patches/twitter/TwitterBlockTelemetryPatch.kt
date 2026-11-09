@@ -1,7 +1,6 @@
 package app.morphe.patches.twitter
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.booleanOption
@@ -13,6 +12,7 @@ import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.childrenNamed
 import app.morphe.patches.shared.disableComponentsByName
 import app.morphe.patches.shared.removeChildren
+import app.morphe.patches.shared.replaceWithReturnVoid
 import app.morphe.patches.shared.removeComponentDiscoveryRegistrarsWhere
 import app.morphe.patches.shared.setApplicationMetaData
 import app.morphe.patches.shared.stripPermissionsWhere
@@ -144,7 +144,7 @@ private fun hookVoidMethod(
     label: String,
 ) {
     fingerprint.method.apply {
-        addInstructions(0, "return-void")
+        replaceWithReturnVoid()
         hookedMethods.add(label)
     }
 }

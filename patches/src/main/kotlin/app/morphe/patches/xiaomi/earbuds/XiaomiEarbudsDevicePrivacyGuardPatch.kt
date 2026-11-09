@@ -5,6 +5,8 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.replaceWithReturnBoolean
+import app.morphe.patches.shared.replaceWithReturnNull
 import org.w3c.dom.Element
 
 private val xiaomiEarbudsDevicePrivacyGuardResourcePatch = resourcePatch(
@@ -68,13 +70,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;", "Ljava/lang/String;", "[Ljava/lang/String;"),
             returnType = "Ljava/lang/String;",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 0
-                    return-object v0
-                """.trimIndent(),
-            )
+            replaceWithReturnNull()
             hookedMethods.add("PrivacyDataMaster.get(Context, String, String[])")
         }
 
@@ -84,13 +80,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;", "Lcom/xiaomi/account/privacy_data/master/PrivacyDataType;", "[Ljava/lang/String;"),
             returnType = "Ljava/lang/String;",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 0
-                    return-object v0
-                """.trimIndent(),
-            )
+            replaceWithReturnNull()
             hookedMethods.add("PrivacyDataMaster.get(Context, PrivacyDataType, String[])")
         }
 
@@ -100,13 +90,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;", "Ljava/lang/String;", "[Ljava/lang/String;"),
             returnType = "Ljava/lang/String;",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 0
-                    return-object v0
-                """.trimIndent(),
-            )
+            replaceWithReturnNull()
             hookedMethods.add("PrivacyDataMaster.forceGet(Context, String, String[])")
         }
 
@@ -116,13 +100,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;", "Lcom/xiaomi/account/privacy_data/master/PrivacyDataType;", "[Ljava/lang/String;"),
             returnType = "Ljava/lang/String;",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 0
-                    return-object v0
-                """.trimIndent(),
-            )
+            replaceWithReturnNull()
             hookedMethods.add("PrivacyDataMaster.forceGet(Context, PrivacyDataType, String[])")
         }
 
@@ -202,13 +180,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;"),
             returnType = "Z",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 1
-                    return v0
-                """.trimIndent(),
-            )
+            replaceWithReturnBoolean(true)
             hookedMethods.add("LocationExtKt.isLocationEnable")
         }
 
@@ -218,13 +190,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;"),
             returnType = "Z",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 1
-                    return v0
-                """.trimIndent(),
-            )
+            replaceWithReturnBoolean(true)
             hookedMethods.add("LocationExtKt.isGpsEnable")
         }
 
@@ -234,13 +200,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf("Landroid/content/Context;"),
             returnType = "Z",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 1
-                    return v0
-                """.trimIndent(),
-            )
+            replaceWithReturnBoolean(true)
             hookedMethods.add("e.A(locationProviderCheck)")
         }
 
@@ -250,13 +210,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf(),
             returnType = "Z",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 1
-                    return v0
-                """.trimIndent(),
-            )
+            replaceWithReturnBoolean(true)
             hookedMethods.add("AddDeviceViewModel.isLocationEnable")
         }
 
@@ -285,13 +239,7 @@ val xiaomiEarbudsDevicePrivacyGuardPatch = bytecodePatch(
             parameters = listOf(),
             returnType = "Z",
         ).method.apply {
-            addInstructions(
-                0,
-                """
-                    const/4 v0, 1
-                    return v0
-                """.trimIndent(),
-            )
+            replaceWithReturnBoolean(true)
             hookedMethods.add("AddDeviceFragment.hasScanCondition")
         }
 

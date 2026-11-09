@@ -1,10 +1,9 @@
 package app.morphe.patches.capcut
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
-import app.morphe.patches.shared.ensureRegisterCount
+import app.morphe.patches.shared.replaceWithReturnBoolean
 import com.android.tools.smali.dexlib2.AccessFlags
 
 private object WatermarkBusinessFunctionB4Fingerprint : Fingerprint(
@@ -74,37 +73,20 @@ val capcutRemoveWatermarkPatch = bytecodePatch(
     execute {
         var patched = 0
 
-        fun forceTrue(fp: Fingerprint) {
-            fp.method.ensureRegisterCount(1)
-            fp.method.addInstructions(
-                0,
-                """
-                    const/4 v0, 0x1
-                    return v0
-                """,
-            )
-            patched++
-        }
-
-        fun forceFalse(fp: Fingerprint) {
-            fp.method.ensureRegisterCount(1)
-            fp.method.addInstructions(
-                0,
-                """
-                    const/4 v0, 0x0
-                    return v0
-                """,
-            )
-            patched++
-        }
-
-        forceTrue(WatermarkBusinessFunctionB4Fingerprint)
-        forceTrue(WatermarkBusinessFunctionQ0Fingerprint)
-        forceTrue(WatermarkBusinessFunctionD4Fingerprint)
-        forceTrue(WatermarkBusinessFunctionF4Fingerprint)
-        forceTrue(WatermarkBusinessFunctionV4Fingerprint)
-        forceFalse(WatermarkBusinessFunctionY2Fingerprint)
-        forceFalse(EditConfigKFingerprint)
+        WatermarkBusinessFunctionB4Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        WatermarkBusinessFunctionQ0Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        WatermarkBusinessFunctionD4Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        WatermarkBusinessFunctionF4Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        WatermarkBusinessFunctionV4Fingerprint.method.replaceWithReturnBoolean(true)
+        patched++
+        WatermarkBusinessFunctionY2Fingerprint.method.replaceWithReturnBoolean(false)
+        patched++
+        EditConfigKFingerprint.method.replaceWithReturnBoolean(false)
+        patched++
 
         println("[Remove Watermark] Applied $patched hooks -> watermark and default ending gates forced to allow removal.")
     }

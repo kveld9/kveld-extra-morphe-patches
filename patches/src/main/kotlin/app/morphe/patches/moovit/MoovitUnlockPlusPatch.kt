@@ -8,6 +8,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants.COMPATIBILITY_MOOVIT
+import app.morphe.patches.shared.replaceWithReturnBoolean
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
@@ -63,13 +64,7 @@ val moovitUnlockPlusPatch = bytecodePatch(
         var patched = 0
 
         // 1. Subscription state gate -> always subscribed
-        subscriptionStateFingerprint.method.addInstructions(
-            0,
-            """
-                const/4 p0, 0x1
-                return p0
-            """.trimIndent(),
-        )
+        subscriptionStateFingerprint.method.replaceWithReturnBoolean(true)
         patched++
 
         // 2. Package state -> always ACTIVE on initialization

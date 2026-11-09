@@ -1,11 +1,11 @@
 package app.morphe.patches.instagram
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.disableComponentsByName
+import app.morphe.patches.shared.replaceWithReturnVoid
 import app.morphe.patches.shared.stripPermissionsWhere
 
 private val instagramTelemetryResourcePatch = resourcePatch(
@@ -98,7 +98,7 @@ val instagramBlockTelemetryPatch = bytecodePatch(
             parameters = listOf("LX/0mQV;", "LX/0VWx;", "LX/08qB;"),
             returnType = "V",
         ).method.apply {
-            addInstructions(0, "return-void")
+            replaceWithReturnVoid()
             hookedMethods.add("IgAnalytics2TaskBasedUploader.HlU")
         }
 
@@ -108,7 +108,7 @@ val instagramBlockTelemetryPatch = bytecodePatch(
             parameters = listOf("LX/0mQV;", "LX/0VWx;", "LX/08qB;"),
             returnType = "V",
         ).method.apply {
-            addInstructions(0, "return-void")
+            replaceWithReturnVoid()
             hookedMethods.add("IGAnalytics2SimpleUploader.HlU")
         }
 
@@ -118,7 +118,7 @@ val instagramBlockTelemetryPatch = bytecodePatch(
             parameters = listOf("LX/0mQV;", "LX/0VWx;", "LX/08qB;"),
             returnType = "V",
         ).method.apply {
-            addInstructions(0, "return-void")
+            replaceWithReturnVoid()
             hookedMethods.add("PrivacyControlledUploader.HlU")
         }
 
