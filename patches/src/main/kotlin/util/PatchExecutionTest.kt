@@ -445,7 +445,7 @@ private fun ensurePkcs12KeyStore(keystoreFile: File) {
 
 private fun verifyInputVersion(
     patcher: Patcher,
-    targetPatches: Set<Patch<*>>,
+    targetPatches: Set<Patch>,
     targetApp: TargetApp,
     inputFile: File,
 ) {
