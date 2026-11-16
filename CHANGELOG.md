@@ -1,3 +1,9 @@
+## [1.32.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.32.0...v1.32.1) (2026-11-16)
+
+### Bug Fixes
+
+* **deps:** scope the minimatch alert to the copy npm bundles ([5a8ee10](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5a8ee10afa9e86c3d8a98f05fe3e1b862506e0c0))
+
 ## [1.32.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.31.0...v1.32.0) (2026-11-16)
 
 ### Bug Fixes
