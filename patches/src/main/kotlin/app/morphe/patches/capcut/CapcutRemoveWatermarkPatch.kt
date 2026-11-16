@@ -24,7 +24,7 @@ private object WatermarkBusinessFunctionQ0Fingerprint : Fingerprint(
 
 private object WatermarkBusinessFunctionD4Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/subscription/biz/function/WatermarkBusinessFunction;",
-    name = "D4",
+    name = "C4",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",
     parameters = listOf("Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),
@@ -32,7 +32,7 @@ private object WatermarkBusinessFunctionD4Fingerprint : Fingerprint(
 
 private object WatermarkBusinessFunctionF4Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/subscription/biz/function/WatermarkBusinessFunction;",
-    name = "F4",
+    name = "E4",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",
     parameters = listOf("Lcom/vega/subscriptionapi/biz/function/WatermarkBusinessParam;", "Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),

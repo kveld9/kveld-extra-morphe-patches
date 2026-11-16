@@ -9,7 +9,7 @@ import app.morphe.patches.shared.replaceWithReturnBoolean
 
 private object CutSamePurchaseViewModelU6Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/libcutsame/viewmodel/CutSamePurchaseViewModel;",
-    name = "u6",
+    name = "A6",
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
@@ -22,7 +22,7 @@ private object CutSamePurchaseViewModelU6Fingerprint : Fingerprint(
 
 private object CutSamePurchaseViewModelX6Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/libcutsame/viewmodel/CutSamePurchaseViewModel;",
-    name = "x6",
+    name = "D6",
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
@@ -35,7 +35,7 @@ private object CutSamePurchaseViewModelX6Fingerprint : Fingerprint(
 
 private object CutSamePurchaseViewModelW6Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/libcutsame/viewmodel/CutSamePurchaseViewModel;",
-    name = "w6",
+    name = "C6",
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
@@ -48,7 +48,7 @@ private object CutSamePurchaseViewModelW6Fingerprint : Fingerprint(
 
 private object CutSamePurchaseViewModelZ6Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/libcutsame/viewmodel/CutSamePurchaseViewModel;",
-    name = "z6",
+    name = "F6",
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
@@ -61,7 +61,7 @@ private object CutSamePurchaseViewModelZ6Fingerprint : Fingerprint(
 
 private object CutSamePurchaseViewModelA6Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/libcutsame/viewmodel/CutSamePurchaseViewModel;",
-    name = "A6",
+    name = "G6",
     returnType = "Z",
     parameters = listOf(),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),

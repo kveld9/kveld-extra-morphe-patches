@@ -83,8 +83,8 @@ object Constants {
     )
 
     const val CAPCUT_PACKAGE_NAME = "com.lemon.lvoverseas"
-    const val CAPCUT_TARGET_VERSION = "19.9.0"
-    const val CAPCUT_INPUT_SHA256 = "3c74a9941237451953fe4ed1abe477b7413d11d11a4b5b45a17441afd30f2c38"
+    const val CAPCUT_TARGET_VERSION = "20.1.0"
+    const val CAPCUT_INPUT_SHA256 = "565c060094c1b38459b2aa30609b2e774d462a14344607f15c2cef84196e444a"
 
     val COMPATIBILITY_CAPCUT = Compatibility(
         name = "CapCut",
@@ -94,7 +94,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = CAPCUT_TARGET_VERSION,
-                description = "Download com.lemon.lvoverseas v$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19900002 from APKMirror",
+                description = "Download com.lemon.lvoverseas v$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 20101600 from APKMirror",
             )
         )
     )
